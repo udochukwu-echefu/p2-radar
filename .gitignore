@@ -1,0 +1,11 @@
+# build output
+mac-app/build/
+
+# Python
+__pycache__/
+*.pyc
+
+# local tooling and notes
+.claude/
+PRODUCT.md
+.DS_Store
