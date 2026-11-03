@@ -38,7 +38,7 @@ Optional weekly check (Mondays at 10:00, posts a notification when work isn't ba
 ./mac-app/weekly.sh install
 ```
 
-## Build on Windows (experimental)
+## Build on Windows
 
 Requirements: Windows 10 or 11, Python 3.8+ from [python.org](https://www.python.org/downloads/windows/) (tick "Add to PATH"), the [.NET 8 SDK](https://dotnet.microsoft.com/download) to build, and Git. Microsoft Word or LibreOffice enables document and PDF conversion; images convert without them.
 
@@ -50,7 +50,7 @@ cd project-radar
 
 That installs Radar to `%LOCALAPPDATA%\Programs\Radar`, adds it to the Start menu, and schedules the weekly check. A build of every commit is also attached to the [CI runs](https://github.com/udochukwu-echefu/project-radar/actions/workflows/ci.yml) as `Radar-windows-x64`.
 
-What differs from the Mac version: files go to the **Recycle Bin** (Undo restores them), **Explorer** replaces Finder, the app lives in the **system tray**, and the Mac-only pieces (Xcode data, `/Applications`) are replaced by Windows equivalents (npm/pip/NuGet/VS Code caches, installed programs from the registry). The engine's tests run on Windows in CI on every push, but the Windows app hasn't had much real-world use yet.
+What differs from the Mac version: files go to the **Recycle Bin** (Undo restores them), **Explorer** replaces Finder, the app lives in the **system tray**, and the Mac-only pieces (Xcode data, `/Applications`) are replaced by Windows equivalents (npm/pip/NuGet/VS Code caches, installed programs from the registry). The engine's tests run on Windows in CI on every push.
 
 ### Without the app
 
