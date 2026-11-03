@@ -5,6 +5,7 @@
 #   ./build.sh --engine       only sync the engine + dashboard and relaunch Radar
 #                             (no re-sign, so macOS won't ask for folder access again)
 #   ./build.sh --no-install   build only (into ./build)
+# RADAR_ARCHS="arm64 x86_64" builds a universal app; RADAR_VERSION sets its version.
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -45,7 +46,12 @@ done
 iconutil -c icns "$ICONSET" -o "$BUILD/Radar.icns"
 
 echo "→ compile"
-swiftc -O -target "$(uname -m)-apple-macos14.0" "$HERE/main.swift" -o "$BUILD/Radar"
+slices=()
+for arch in ${RADAR_ARCHS:-$(uname -m)}; do
+  swiftc -O -target "$arch-apple-macos14.0" "$HERE/main.swift" -o "$BUILD/Radar-$arch"
+  slices+=("$BUILD/Radar-$arch")
+done
+lipo -create "${slices[@]}" -output "$BUILD/Radar"
 
 echo "→ bundle"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/radar"
@@ -76,6 +82,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 </dict>
 </plist>
 PLIST
+plutil -replace CFBundleShortVersionString -string "${RADAR_VERSION:-1.0}" "$APP/Contents/Info.plist"
 
 # A stable signing identity keeps macOS's folder permissions across rebuilds.
 # Create one once in Keychain Access (see README); otherwise sign ad hoc.

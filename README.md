@@ -11,7 +11,15 @@ A small app for macOS and Windows that keeps an eye on your work and your disk.
 
 Everything runs locally. Radar's dashboard is served on `127.0.0.1` only, and nothing leaves your computer unless you press Push or Back up.
 
-## Install on macOS
+## Download
+
+Get the latest build for macOS (universal) or Windows from [Releases](https://github.com/udochukwu-echefu/project-radar/releases/latest), or from the [website](https://udochukwu-echefu.github.io/project-radar/). Both need Python 3.
+
+The apps aren't notarized or code-signed by a paid developer account, so the first launch shows a warning: on macOS, open System Settings › Privacy & Security and click **Open Anyway**; on Windows, click **More info › Run anyway** in SmartScreen.
+
+If Radar is useful to you, a ⭐ on GitHub helps other people find it.
+
+## Build on macOS
 
 Requirements: macOS 14 or later, Python 3.8+ (from [python.org](https://www.python.org/downloads/macos/) or Homebrew), and the Xcode command line tools (`xcode-select --install`) to build the app. The [GitHub CLI](https://cli.github.com) (`gh`) is optional and enables "Back up to GitHub".
 
@@ -30,7 +38,7 @@ Optional weekly check (Mondays at 10:00, posts a notification when work isn't ba
 ./mac-app/weekly.sh install
 ```
 
-## Install on Windows (experimental)
+## Build on Windows (experimental)
 
 Requirements: Windows 10 or 11, Python 3.8+ from [python.org](https://www.python.org/downloads/windows/) (tick "Add to PATH"), the [.NET 8 SDK](https://dotnet.microsoft.com/download) to build, and Git. Microsoft Word or LibreOffice enables document and PDF conversion; images convert without them.
 
@@ -106,6 +114,7 @@ The engine is Python standard library only. The server answers only on `127.0.0.
 ./mac-app/build.sh            # rebuild and reinstall the app
 ./mac-app/build.sh --engine   # update only the engine and dashboard, without re-signing
 python -m unittest discover -s tests -v   # engine tests (run on Windows and macOS in CI)
+git tag v0.1.0 && git push origin v0.1.0  # CI builds both apps and publishes a release
 ```
 
 ### Keeping permissions across rebuilds

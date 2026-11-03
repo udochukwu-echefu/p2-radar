@@ -2,6 +2,8 @@ name: CI
 
 on:
   push:
+    branches: ["**"]
+    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 
@@ -42,20 +44,58 @@ jobs:
       - name: Engine runs from the published folder
         shell: pwsh
         run: python win-app/publish/engine/radar.py --root tests
+      - name: Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Rename-Item win-app/publish Radar
+          Compress-Archive -Path win-app/Radar -DestinationPath dist/Radar-windows-x64.zip
       - uses: actions/upload-artifact@v4
         with:
           name: Radar-windows-x64
-          path: win-app/publish
+          path: dist/Radar-windows-x64.zip
 
   mac-app:
     name: Mac app build
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build
-        run: ./mac-app/build.sh --no-install
+      - name: Build (universal)
+        env:
+          RADAR_ARCHS: arm64 x86_64
+          RADAR_VERSION: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '0.0.0' }}
+        run: |
+          RADAR_VERSION="${RADAR_VERSION#v}" ./mac-app/build.sh --no-install
+          lipo -archs mac-app/build/Radar.app/Contents/MacOS/Radar
       - name: Native converter
         run: |
           printf '<h1>Radar</h1><p>CI</p>' > /tmp/ci.html
           ./mac-app/build/Radar.app/Contents/MacOS/Radar --convert /tmp/ci.html /tmp/ci.pdf
           test -s /tmp/ci.pdf
+      - name: Package
+        run: |
+          mkdir -p dist
+          ditto -c -k --keepParent mac-app/build/Radar.app dist/Radar-mac.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Radar-mac
+          path: dist/Radar-mac.zip
+
+  # Pushing a tag like v0.1.0 publishes both downloads as a GitHub release,
+  # which the website links to through releases/latest/download/<file>.
+  release:
+    name: Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [engine, windows-app, mac-app]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/Radar-mac.zip dist/Radar-windows-x64.zip --repo "$GITHUB_REPOSITORY" --title "Radar $GITHUB_REF_NAME" --generate-notes
