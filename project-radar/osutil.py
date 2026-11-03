@@ -139,7 +139,9 @@ if IS_WIN:
 def trash(path):
     """Move a file or folder to the system trash and return a token that
     untrash() can use to put it back."""
-    path = os.path.abspath(path)
+    # realpath expands Windows short names (C:\\Users\\RUNNER~1) so the Recycle Bin
+    # records the same long path that untrash() later looks for.
+    path = os.path.realpath(path) if IS_WIN else os.path.abspath(path)
     if IS_MAC and os.path.exists("/usr/bin/trash"):
         r = subprocess.run(["/usr/bin/trash", "-v", "-s", path], capture_output=True, text=True, timeout=300)
         m = re.search(r' to "(.+)"\s*$', r.stdout)
@@ -161,14 +163,51 @@ def trash(path):
     return str(dest)
 
 
-_RESTORE_PS = r"""
-$o = $env:RADAR_RESTORE; $dir = Split-Path $o -Parent; $leaf = Split-Path $o -Leaf
-$stem = [IO.Path]::GetFileNameWithoutExtension($leaf)
-$rb = (New-Object -ComObject Shell.Application).Namespace(10)
-$hit = @($rb.Items()) | Where-Object { $_.ExtendedProperty('System.Recycle.DeletedFrom') -eq $dir -and ($_.Name -eq $leaf -or $_.Name -eq $stem) } |
-  Sort-Object { $_.ExtendedProperty('System.Recycle.DateDeleted') } -Descending | Select-Object -First 1
-if ($hit) { Move-Item -LiteralPath $hit.Path -Destination $o; 'ok' } else { 'missing' }
-"""
+def _recycle_info(info):
+    """Original path and deletion time from a Recycle Bin $I file
+    (version 1: Vista/7, version 2: Windows 10 and later)."""
+    data = Path(info).read_bytes()
+    version = int.from_bytes(data[0:8], "little")
+    deleted = int.from_bytes(data[16:24], "little")
+    if version >= 2:
+        n = int.from_bytes(data[24:28], "little")
+        original = data[28:28 + 2 * n].decode("utf-16-le")
+    else:
+        original = data[24:24 + 520].decode("utf-16-le")
+    return original.split("\0")[0], deleted
+
+
+def _restore_recycled(deleted_path, original):
+    """Find the newest Recycle Bin entry for deleted_path and move it back.
+    Reads the bin's own $I records, so it doesn't depend on Explorer settings or language."""
+    drive = os.path.splitdrive(deleted_path)[0] or os.path.splitdrive(str(HOME))[0]
+    want = os.path.normcase(os.path.realpath(deleted_path))
+    best = None
+    try:
+        sids = [e.path for e in os.scandir(drive + "\\$Recycle.Bin") if e.is_dir()]
+    except OSError:
+        return False
+    for sid in sids:
+        try:
+            infos = [e.path for e in os.scandir(sid) if e.name.startswith("$I")]
+        except OSError:
+            continue   # another user's bin
+        for info in infos:
+            try:
+                orig, when = _recycle_info(info)
+            except (OSError, ValueError, UnicodeDecodeError):
+                continue
+            if os.path.normcase(os.path.realpath(orig)) == want and (best is None or when > best[1]):
+                best = (info, when)
+    if not best:
+        return False
+    info = Path(best[0])
+    data = info.with_name("$R" + info.name[2:])
+    if not data.exists():
+        return False
+    shutil.move(str(data), original)
+    info.unlink(missing_ok=True)
+    return True
 
 
 def untrash(token, original):
@@ -176,11 +215,7 @@ def untrash(token, original):
     if os.path.exists(original):
         return False
     if token.startswith("recycle:"):
-        if not IS_WIN:
-            return False
-        r = subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", _RESTORE_PS],
-                           capture_output=True, text=True, timeout=120, env={**os.environ, "RADAR_RESTORE": original}, **quiet())
-        return r.stdout.strip().endswith("ok") and os.path.exists(original)
+        return IS_WIN and _restore_recycled(token[len("recycle:"):], original)
     if os.path.exists(token):
         shutil.move(token, original)
         return True
