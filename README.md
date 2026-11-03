@@ -1,15 +1,17 @@
 # Radar
 
-A small Mac app that keeps an eye on your work and your disk.
+A small app for macOS and Windows that keeps an eye on your work and your disk.
+
+[![CI](https://github.com/udochukwu-echefu/project-radar/actions/workflows/ci.yml/badge.svg)](https://github.com/udochukwu-echefu/project-radar/actions/workflows/ci.yml)
 
 - **Projects**: finds every git repo in your home folder and shows which ones have work that isn't backed up: no remote at all, uncommitted changes, or commits that were never pushed. Back them up in one click.
 - **Cleanup**: sorts Downloads, Desktop and storage (dependency folders, package and app caches, Xcode data) and pre-ticks only what's safe. Everything goes to the Trash, with undo.
 - **Secrets**: finds credential files tracked in git, about to be committed, or lying around in Desktop, Documents and Downloads.
 - **Convert**: one-click conversion between Word, RTF, text, Markdown, HTML, PDF and image formats.
 
-Everything runs locally. Radar's dashboard is served on `127.0.0.1` only, and nothing leaves your Mac unless you press Push or Back up.
+Everything runs locally. Radar's dashboard is served on `127.0.0.1` only, and nothing leaves your computer unless you press Push or Back up.
 
-## Install
+## Install on macOS
 
 Requirements: macOS 14 or later, Python 3.8+ (from [python.org](https://www.python.org/downloads/macos/) or Homebrew), and the Xcode command line tools (`xcode-select --install`) to build the app. The [GitHub CLI](https://cli.github.com) (`gh`) is optional and enables "Back up to GitHub".
 
@@ -28,9 +30,23 @@ Optional weekly check (Mondays at 10:00, posts a notification when work isn't ba
 ./mac-app/weekly.sh install
 ```
 
+## Install on Windows (experimental)
+
+Requirements: Windows 10 or 11, Python 3.8+ from [python.org](https://www.python.org/downloads/windows/) (tick "Add to PATH"), the [.NET 8 SDK](https://dotnet.microsoft.com/download) to build, and Git. Microsoft Word or LibreOffice enables document and PDF conversion; images convert without them.
+
+```powershell
+git clone https://github.com/udochukwu-echefu/project-radar.git
+cd project-radar
+.\win-app\build.ps1 -Weekly
+```
+
+That installs Radar to `%LOCALAPPDATA%\Programs\Radar`, adds it to the Start menu, and schedules the weekly check. A build of every commit is also attached to the [CI runs](https://github.com/udochukwu-echefu/project-radar/actions/workflows/ci.yml) as `Radar-windows-x64`.
+
+What differs from the Mac version: files go to the **Recycle Bin** (Undo restores them), **Explorer** replaces Finder, the app lives in the **system tray**, and the Mac-only pieces (Xcode data, `/Applications`) are replaced by Windows equivalents (npm/pip/NuGet/VS Code caches, installed programs from the registry). The engine's tests run on Windows in CI on every push, but the Windows app hasn't had much real-world use yet.
+
 ### Without the app
 
-The engine also runs on its own and serves the same dashboard in your browser (PDF conversion and the menu bar need the app):
+The engine also runs on its own, on macOS, Windows or Linux, and serves the same dashboard in your browser (the tray/menu bar and macOS PDF conversion need the app):
 
 ```bash
 python3 project-radar/radar.py serve       # dashboard at http://127.0.0.1:8765
@@ -64,14 +80,20 @@ Credential files tracked in git (with **Stop tracking**, which removes them from
 ### Convert
 Drop files onto the window or pick a recent file. Documents to and from PDF use macOS's own text system and PDFKit; images use `sips`; document formats use `textutil`. Output is saved next to the original and never overwrites it.
 
-### Mac app
-Dock badge and a menu bar item with the projects that need attention; it keeps running in the menu bar when the window is closed. Light and dark themes.
+### Apps
+**macOS:** Dock badge and a menu bar item with the projects that need attention; it keeps running in the menu bar when the window is closed.
+**Windows:** a system tray icon with the same menu; it keeps running in the tray when the window is closed.
+Both: live updates as files change, a weekly notification, light and dark themes.
 
 ## How it works
 
 ```
-mac-app/main.swift        native shell: window (WKWebView), menu bar, notifications,
+mac-app/main.swift        macOS shell: window (WKWebView), menu bar, notifications,
                           FSEvents file watching, PDF conversion (Radar --convert)
+win-app/Program.cs        Windows shell: window (WebView2), tray, notifications,
+                          FileSystemWatcher, single instance
+project-radar/osutil.py   the platform layer: trash/Recycle Bin and undo, Finder/Explorer,
+                          terminals, installed apps, folder locations
 project-radar/radar.py    scanning, git actions, local server, live updates (server-sent events)
 project-radar/downloads.py   Downloads/Desktop sweep        storage.py   storage sweep
 project-radar/leaks.py       secrets check                  convert.py   converter
@@ -83,6 +105,7 @@ The engine is Python standard library only. The server answers only on `127.0.0.
 ```bash
 ./mac-app/build.sh            # rebuild and reinstall the app
 ./mac-app/build.sh --engine   # update only the engine and dashboard, without re-signing
+python -m unittest discover -s tests -v   # engine tests (run on Windows and macOS in CI)
 ```
 
 ### Keeping permissions across rebuilds

@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  engine:
+    name: Engine tests (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Platform layer
+        run: python project-radar/osutil.py
+      - name: Unit and end-to-end tests
+        run: python -m unittest discover -s tests -v
+      - name: CLI smoke test
+        run: python project-radar/radar.py --root tests
+
+  windows-app:
+    name: Windows app build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build
+        shell: pwsh
+        run: ./win-app/build.ps1 -NoInstall
+      - name: Engine runs from the published folder
+        shell: pwsh
+        run: python win-app/publish/engine/radar.py --root tests
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Radar-windows-x64
+          path: win-app/publish
+
+  mac-app:
+    name: Mac app build
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: ./mac-app/build.sh --no-install
+      - name: Native converter
+        run: |
+          printf '<h1>Radar</h1><p>CI</p>' > /tmp/ci.html
+          ./mac-app/build/Radar.app/Contents/MacOS/Radar --convert /tmp/ci.html /tmp/ci.pdf
+          test -s /tmp/ci.pdf

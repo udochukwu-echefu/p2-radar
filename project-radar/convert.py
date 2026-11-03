@@ -1,7 +1,11 @@
-"""One-click document converter for Radar. Uses macOS's own tools: textutil
-for document formats, sips for images, and Radar.app's native converter
-(RADAR_APP_BIN --convert) for anything to or from PDF. Output lands next to
-the original, never overwriting it.
+"""One-click document converter for Radar. Output lands next to the
+original, never overwriting it.
+
+macOS:   textutil (documents), sips (images), Radar.app's native converter
+         (RADAR_APP_BIN --convert) for anything to or from PDF.
+Windows: Microsoft Word through COM for documents and PDF (or LibreOffice when
+         Word isn't installed), and Windows' own imaging (System.Drawing) for images.
+Linux:   LibreOffice when installed.
 """
 
 import html
@@ -11,38 +15,91 @@ import re
 import shutil
 import subprocess
 import tempfile
-import time
 from pathlib import Path
 
+import osutil
+
 HOME = Path.home()
-ROOTS = [HOME / "Downloads", HOME / "Desktop", HOME / "Documents"]
-DOCS = {".docx", ".doc", ".rtf", ".odt", ".html", ".htm", ".txt", ".md", ".markdown", ".rtfd", ".pages_unsupported"}
+ROOTS = [osutil.user_folder(n) for n in ("Downloads", "Desktop", "Documents")]
+DOCS = {".docx", ".doc", ".rtf", ".odt", ".html", ".htm", ".txt", ".md", ".markdown", ".rtfd"}
 IMAGES = {".heic", ".heif", ".png", ".jpg", ".jpeg", ".webp", ".tiff", ".tif", ".gif", ".bmp"}
 TEXTUTIL_OUT = {"docx": "docx", "rtf": "rtf", "txt": "txt", "html": "html", "odt": "odt"}
 SIPS_OUT = {"jpg": "jpeg", "png": "png", "heic": "heic", "pdf": "pdf", "tiff": "tiff"}
+WORD_FORMATS = {"pdf": 17, "docx": 16, "rtf": 6, "txt": 7, "html": 10}           # WdSaveFormat
+GDI_FORMATS = {"jpg": "Jpeg", "png": "Png", "tiff": "Tiff", "bmp": "Bmp", "gif": "Gif"}
+GDI_READS = {".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tiff", ".tif"}
 
 
 def app_bin():
     b = os.environ.get("RADAR_APP_BIN")
-    return b if b and os.path.exists(b) else None
+    return b if osutil.IS_MAC and b and os.path.exists(b) else None
+
+
+def _word():
+    if not osutil.IS_WIN:
+        return False
+    try:
+        import winreg
+        winreg.CloseKey(winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, r"Word.Application\CLSID"))
+        return True
+    except OSError:
+        return False
+
+
+def _soffice():
+    for c in (shutil.which("soffice"), shutil.which("libreoffice"),
+              r"C:\Program Files\LibreOffice\program\soffice.exe", "/Applications/LibreOffice.app/Contents/MacOS/soffice"):
+        if c and os.path.exists(c):
+            return c
+    return None
+
+
+_CAPS = None
+
+
+def caps():
+    """What this computer can convert, worked out once."""
+    global _CAPS
+    if _CAPS is None:
+        word, office = _word(), _soffice()
+        _CAPS = {
+            "docs": "textutil" if osutil.IS_MAC else "word" if word else "libreoffice" if office else None,
+            "pdf_out": bool(app_bin()) or word or bool(office),
+            "pdf_in": bool(app_bin()) or word,
+            "pdf_pages": bool(app_bin()),
+            "images": "sips" if osutil.IS_MAC else "gdi" if osutil.IS_WIN else None,
+            "office": office, "word": word,
+        }
+    return _CAPS
+
+
+def native():
+    """Whether PDF output is available (shown in the dashboard)."""
+    return caps()["pdf_out"]
 
 
 def targets(path):
+    c = caps()
     ext = Path(path).suffix.lower()
     if ext in (".md", ".markdown"):
-        t = ["pdf", "docx", "html", "txt"]
+        t = ["pdf", "docx", "html", "txt"] if c["docs"] else ["html", "txt"]
     elif ext in DOCS:
-        t = ["pdf", "docx", "rtf", "txt", "html"]
+        t = ["pdf", "docx", "rtf", "txt", "html"] if c["docs"] else []
     elif ext in IMAGES:
-        t = ["jpg", "png", "heic", "pdf"]
+        if c["images"] == "sips":
+            t = ["jpg", "png", "heic", "pdf"]
+        elif c["images"] == "gdi" and ext in GDI_READS:
+            t = ["jpg", "png", "tiff"]
+        else:
+            t = []
     elif ext == ".pdf":
-        t = ["txt", "docx", "png"]
+        t = (["txt", "docx"] if c["pdf_in"] else []) + (["png"] if c["pdf_pages"] else [])
     else:
         return []
     own = {".jpeg": "jpg", ".htm": "html", ".tif": "tiff", ".heif": "heic"}.get(ext, ext[1:])
     t = [x for x in t if x != own]
-    if not app_bin():   # PDF in/out needs the native converter
-        t = [x for x in t if x != "pdf"] if ext != ".pdf" else []
+    if not c["pdf_out"]:
+        t = [x for x in t if x != "pdf"]
     return t
 
 
@@ -130,13 +187,13 @@ def _md_to_html(text):
             para.append(line.strip())
     flush()
     body = "\n".join(out)
-    return f"<!doctype html><meta charset='utf-8'><body style='font-family:-apple-system,Helvetica;font-size:12pt;line-height:1.45'>{body}</body>"
+    return f"<!doctype html><meta charset='utf-8'><body style='font-family:-apple-system,Segoe UI,Helvetica;font-size:12pt;line-height:1.45'>{body}</body>"
 
 
-def _run(cmd, timeout=180):
-    r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+def _run(cmd, timeout=180, env=None):
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, env={**os.environ, **(env or {})}, **osutil.quiet())
     if r.returncode != 0:
-        raise RuntimeError((r.stderr or r.stdout).strip() or f"{cmd[0]} failed")
+        raise RuntimeError((r.stderr or r.stdout).strip()[-400:] or f"{cmd[0]} failed")
     return r.stdout
 
 
@@ -151,44 +208,92 @@ def _native(src, dst):
         return [Path(dst)]
 
 
+_WORD_PS = r"""
+$ErrorActionPreference = 'Stop'
+$w = New-Object -ComObject Word.Application
+$w.Visible = $false; $w.DisplayAlerts = 0
+try {
+  $d = $w.Documents.Open($env:RADAR_SRC, $false, $true)
+  $d.SaveAs2($env:RADAR_DST, [int]$env:RADAR_FMT)
+  $d.Close(0)
+} finally { $w.Quit() }
+"""
+
+_GDI_PS = r"""
+$ErrorActionPreference = 'Stop'
+Add-Type -AssemblyName System.Drawing
+$img = [System.Drawing.Image]::FromFile($env:RADAR_SRC)
+try { $img.Save($env:RADAR_DST, [System.Drawing.Imaging.ImageFormat]::$($env:RADAR_FMT)) } finally { $img.Dispose() }
+"""
+
+
+def _powershell(script, env, timeout=240):
+    _run(["powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script], timeout=timeout, env=env)
+
+
+def _office(src, dst, to):
+    """LibreOffice writes <stem>.<ext> into a folder; move it to the unique name."""
+    out = Path(tempfile.mkdtemp(prefix="radar-lo-"))
+    fmt = {"txt": "txt:Text", "html": "html"}.get(to, to)
+    _run([caps()["office"], "--headless", "--convert-to", fmt, "--outdir", str(out), str(src)], timeout=300)
+    produced = next(out.iterdir(), None)
+    if not produced:
+        raise RuntimeError("LibreOffice didn't produce a file")
+    shutil.move(str(produced), dst)
+    shutil.rmtree(out, ignore_errors=True)
+
+
+def _document(work, dst, to):
+    backend = caps()["docs"]
+    if backend == "textutil":
+        if to == "pdf":
+            return _native(work, dst)
+        _run(["textutil", "-convert", TEXTUTIL_OUT[to], str(work), "-output", str(dst)])
+    elif backend == "word":
+        _powershell(_WORD_PS, {"RADAR_SRC": str(work), "RADAR_DST": str(dst), "RADAR_FMT": str(WORD_FORMATS[to])})
+    elif backend == "libreoffice":
+        _office(work, dst, to)
+    else:
+        raise RuntimeError("No document converter here. Install Microsoft Word or LibreOffice.")
+    return [dst]
+
+
 def convert(src, to, out_dir=None):
     src = Path(src)
     ext = src.suffix.lower()
     if to not in targets(src):
-        return {"ok": False, "error": f"Can't convert {ext or 'this file'} to {to.upper()}."}
+        return {"ok": False, "error": f"Can't convert {ext or 'this file'} to {to.upper()} on this computer."}
     dst = _unique((Path(out_dir) if out_dir else src.parent) / f"{src.stem}.{to}")
     tmp = Path(tempfile.mkdtemp(prefix="radar-convert-"))
     try:
         work = src
         if ext in (".md", ".markdown"):
             work = tmp / f"{src.stem}.html"
-            work.write_text(_md_to_html(src.read_text(errors="replace")))
-            if to == "html":
-                shutil.copy(work, dst)
-                return {"ok": True, "outputs": [str(dst)]}
-            if to == "txt":
-                shutil.copy(src, dst)
+            work.write_text(_md_to_html(src.read_text(encoding="utf-8", errors="replace")), encoding="utf-8")
+            if to in ("html", "txt"):
+                shutil.copy(work if to == "html" else src, dst)
                 return {"ok": True, "outputs": [str(dst)]}
         if ext in IMAGES:
-            if to == "pdf" and app_bin() is None:
-                return {"ok": False, "error": "PDF output needs Radar.app."}
-            _run(["sips", "-s", "format", SIPS_OUT[to], str(work), "--out", str(dst)])
+            if caps()["images"] == "sips":
+                _run(["sips", "-s", "format", SIPS_OUT[to], str(work), "--out", str(dst)])
+            else:
+                _powershell(_GDI_PS, {"RADAR_SRC": str(work), "RADAR_DST": str(dst), "RADAR_FMT": GDI_FORMATS[to]})
             outputs = [dst]
         elif ext == ".pdf":
-            if to == "txt":
-                outputs = _native(work, dst)
-            elif to == "docx":
-                txt = tmp / f"{src.stem}.txt"
-                _native(work, txt)
-                _run(["textutil", "-convert", "docx", str(txt), "-output", str(dst)])
-                outputs = [dst]
-            else:  # png: one image per page
-                outputs = _native(work, dst)
-        elif to == "pdf":
-            outputs = _native(work, dst)
+            if app_bin():   # macOS: PDFKit in Radar.app
+                if to == "txt":
+                    outputs = _native(work, dst)
+                elif to == "docx":
+                    txt = tmp / f"{src.stem}.txt"
+                    _native(work, txt)
+                    _run(["textutil", "-convert", "docx", str(txt), "-output", str(dst)])
+                    outputs = [dst]
+                else:
+                    outputs = _native(work, dst)
+            else:           # Windows: Word opens PDFs and re-saves them
+                outputs = _document(work, dst, to)
         else:
-            _run(["textutil", "-convert", TEXTUTIL_OUT[to], str(work), "-output", str(dst)])
-            outputs = [dst]
+            outputs = _document(work, dst, to)
         return {"ok": True, "outputs": [str(o) for o in outputs]}
     except (RuntimeError, subprocess.TimeoutExpired, OSError) as e:
         return {"ok": False, "error": str(e)[:400]}

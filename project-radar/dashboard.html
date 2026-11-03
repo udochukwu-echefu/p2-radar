@@ -392,11 +392,17 @@ button.stat:hover { border-color: var(--line-2); transform: translateY(-2px); bo
 
 <script>
 const TOKEN = "__RADAR_TOKEN__";
-if (window.webkit?.messageHandlers?.radar) {
+/* The native shell: WKWebView in Radar.app, WebView2 in Radar for Windows. */
+const nativePost = msg => window.webkit?.messageHandlers?.radar ? window.webkit.messageHandlers.radar.postMessage(msg)
+  : window.chrome?.webview ? window.chrome.webview.postMessage(msg) : null;
+if (window.webkit?.messageHandlers?.radar || window.chrome?.webview) {
   document.documentElement.classList.add("in-app");
-  // Radar.app matches its title bar to the saved theme as soon as the page loads.
-  window.webkit.messageHandlers.radar.postMessage({ theme: document.documentElement.dataset.theme });
+  nativePost({ theme: document.documentElement.dataset.theme });   // title bar follows the saved theme
 }
+/* Platform words, filled in from the engine once the first scan arrives. */
+const P = { os: navigator.platform.startsWith("Win") ? "windows" : "mac", files: "Finder", trash: "Trash", terminal: "Terminal", mod: "⌘" };
+if (P.os === "windows") Object.assign(P, { files: "Explorer", trash: "Recycle Bin", mod: "Ctrl+" });
+const here = () => P.os === "mac" ? "this Mac" : "this PC";
 const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const store = {
   get(k, d) { try { return localStorage.getItem("radar." + k) ?? d; } catch { return d; } },
@@ -433,10 +439,11 @@ const shortDate = ts => new Date(ts * 1000).toLocaleDateString([], { month: "sho
 /* Keep the end of a long path, cut on folder boundaries: "…/JS Projects/infinity_scroll". */
 function shortPath(p, max = 42) {
   if (p.length <= max) return p;
-  const parts = p.split("/");
+  const sep = p.includes("\\") && !p.includes("/") ? "\\" : "/";
+  const parts = p.split(/[\\/]/);
   let out = parts.pop();
-  while (parts.length && (parts[parts.length - 1] + "/" + out).length + 2 <= max) out = parts.pop() + "/" + out;
-  return "…/" + out;
+  while (parts.length && (parts[parts.length - 1] + sep + out).length + 2 <= max) out = parts.pop() + sep + out;
+  return "…" + sep + out;
 }
 function vtName(p) { let h = 5381; for (const c of p) h = (h * 33 + c.charCodeAt(0)) >>> 0; return "r" + h.toString(36); }
 function transition(fn) {
@@ -483,9 +490,9 @@ const stat = (c, ic, label, value, unit, sub, f, jump) => `<${jump ? `button dat
 /* ============================================================ projects */
 
 const LANES = [
-  { id: "local", title: "Only on this Mac", pill: "No remote", hint: "Not backed up anywhere.", c: "var(--red)", test: r => has(r, "local-only") },
+  { id: "local", get title() { return `Only on ${here()}`; }, pill: "No remote", hint: "Not backed up anywhere.", c: "var(--red)", test: r => has(r, "local-only") },
   { id: "dirty", title: "Uncommitted", pill: "Uncommitted", hint: "Edits that were never committed.", c: "var(--amber)", test: r => r.dirty > 0 },
-  { id: "unpushed", title: "Not pushed", pill: "Not pushed", hint: "Committed, but only on this Mac.", c: "var(--blue)", test: r => r.remote && r.unpushed > 0 },
+  { id: "unpushed", title: "Not pushed", pill: "Not pushed", get hint() { return `Committed, but only on ${here()}.`; }, c: "var(--blue)", test: r => r.remote && r.unpushed > 0 },
   { id: "safe", title: "Backed up", pill: "Backed up", hint: "Committed and pushed.", c: "var(--green)", test: () => true },
 ];
 const laneOf = r => LANES.find(l => l.test(r));
@@ -538,8 +545,8 @@ function panel(r) {
   if (p.type === "github") return `<div class="panel"><h4>Create a private GitHub repo</h4><p>Pushes your commits to a new private repository.${r.dirty ? " Uncommitted changes stay local, so snapshot first." : ""}</p>
     <div class="lab">Repository name</div><input class="field" id="ghname" value="${esc(slug(r.name))}">
     <div class="acts">${cancel}<button class="btn primary" data-do="github">Create and push</button></div></div>`;
-  if (p.type === "trash_node_modules") return `<div class="panel"><h4>Move node_modules to the Trash?</h4><p>${plural(r.node_modules.length, "folder")}, ${human(r.node_modules_bytes)}. Running npm install brings them back.</p>
-    <div class="acts">${cancel}<button class="btn danger" data-do="trash_node_modules">Move to Trash</button></div></div>`;
+  if (p.type === "trash_node_modules") return `<div class="panel"><h4>Move node_modules to the ${P.trash}?</h4><p>${plural(r.node_modules.length, "folder")}, ${human(r.node_modules_bytes)}. Running npm install brings them back.</p>
+    <div class="acts">${cancel}<button class="btn danger" data-do="trash_node_modules">Move to ${P.trash}</button></div></div>`;
   return "";
 }
 
@@ -551,12 +558,12 @@ function card(r) {
   const expanded = S.pending?.path === r.path;
   const menu = [
     `<button data-act="open" data-where="editor">${icon("code")}Open in ${S.proj.editor ? "VS Code" : "default app"}</button>`,
-    `<button data-act="open" data-where="finder">${icon("folder")}Show in Finder</button>`,
+    `<button data-act="open" data-where="finder">${icon("folder")}Show in ${P.files}</button>`,
     `<button data-act="open" data-where="terminal">${icon("term")}Open in Terminal</button>`, `<hr>`,
     r.dirty ? `<button data-act="commit">${icon("save")}Snapshot changes</button>` : "",
     r.remote && r.has_commits ? `<button data-act="push">${icon("up")}Push</button>` : "",
     !r.remote && r.has_commits && S.proj.gh ? `<button data-act="github">${icon("cloud")}Back up to GitHub</button>` : "",
-    r.node_modules.length ? `<button data-act="trash_node_modules">${icon("trash")}Move node_modules to Trash</button>` : "", `<hr>`,
+    r.node_modules.length ? `<button data-act="trash_node_modules">${icon("trash")}Move node_modules to ${P.trash}</button>` : "", `<hr>`,
     `<button data-act="${hidden ? "unhide" : "hide"}">${icon("eye")}${hidden ? "Show in Radar again" : "Hide from Radar"}</button>`,
   ].join("");
   const kv = [
@@ -727,12 +734,12 @@ function renderProjects() {
       <div class="pills" role="group" aria-label="Filter">${FILTERS.map(([k, label]) => `<button data-filter="${k}" aria-pressed="${S.filter === k}">${label}<span class="n num">${counts[k]}</span></button>`).join("")}</div>
     </div>
     <div class="stats">
-      ${stat("var(--red)", "laptop", "Only on this Mac", n("local"), "", "No remote at all", null, "local")}
+      ${stat("var(--red)", "laptop", `Only on ${here()}`, n("local"), "", "No remote at all", null, "local")}
       ${stat("var(--amber)", "edit", "Uncommitted", changes, "changes", plural(act.filter(r => r.dirty).length, "project"), null, "dirty")}
       ${stat("var(--blue)", "up", "Not pushed", n("unpushed"), n("unpushed") === 1 ? "project" : "projects", "Committed, not on a remote", null, "unpushed")}
       ${stat("var(--green)", "check", "Backed up", n("safe"), `/ ${act.length}`, "", act.length ? n("safe") / act.length : 0, "safe")}
     </div>
-    ${blocked.length ? `<div class="notice"><b>Some folders couldn't be read:</b> <code>${blocked.map(esc).join(", ")}</code>. Allow Radar in System Settings › Privacy &amp; Security › Files &amp; Folders, then press ⌘R.</div>` : ""}
+    ${blocked.length ? `<div class="notice"><b>Some folders couldn't be read:</b> <code>${blocked.map(esc).join(", ")}</code>. ${P.os === "mac" ? "Allow Radar in System Settings › Privacy &amp; Security › Files &amp; Folders" : "Check that your account can open them"}, then press ${P.mod}R.</div>` : ""}
     ${body}`;
   if (S.flash) {
     const el = document.querySelector(`.card[data-path="${CSS.escape(S.flash)}"]`);
@@ -873,7 +880,7 @@ function renderCleanup() {
   const docker = S.sub === "storage" && d.docker ? `<div class="card note-card"><span class="chip" style="--c:var(--blue)">${icon("box")}</span><div><b>Docker uses ${human(d.docker.disk)}</b>
     <p>${d.docker.running ? `Reclaimable: ${esc(d.docker.reclaimable || "unknown")}. Run <code>docker system prune</code> to free unused images and containers.` : "Docker isn't running. Open Docker Desktop and use Troubleshoot › Clean / Purge data, or run <code>docker system prune</code> once it's up."}</p></div></div>` : "";
   app.innerHTML = `
-    <div class="page-h"><div><h1>Clean up</h1><p>${lede} Everything goes to the Trash and can be undone.</p></div>
+    <div class="page-h"><div><h1>Clean up</h1><p>${lede} Everything goes to the ${P.trash} and can be undone.</p></div>
       <button class="btn" data-suggested>Select suggested</button></div>
     ${nav}
     <div class="stats" id="swstats">${sweepStats(d)}</div>
@@ -888,10 +895,10 @@ function renderActionbar() {
   const sel = d.items.filter(i => picked(S.sub).has(i.path));
   const size = sel.reduce((s, i) => s + i.size, 0);
   $("#ab").innerHTML = S.confirmSweep && sel.length
-    ? `<span class="total">Move <b>${plural(sel.length, "item")}</b> (<b>${human(size)}</b>) to the Trash?</span><span class="confirm"><button class="btn ghost" id="nosweep">Cancel</button><button class="btn danger" id="dosweep">Move to Trash</button></span>`
+    ? `<span class="total">Move <b>${plural(sel.length, "item")}</b> (<b>${human(size)}</b>) to the ${P.trash}?</span><span class="confirm"><button class="btn ghost" id="nosweep">Cancel</button><button class="btn danger" id="dosweep">Move to ${P.trash}</button></span>`
     : `<span class="total num"><b>${sel.length}</b> selected · <b>${human(size)}</b></span>
        ${d.can_undo ? `<button class="btn ghost" id="undo">Undo last sweep</button>` : ""}
-       <button class="btn primary" id="go" ${sel.length ? "" : "disabled"}>Move to Trash</button>`;
+       <button class="btn primary" id="go" ${sel.length ? "" : "disabled"}>Move to ${P.trash}</button>`;
   requestAnimationFrame(() => bar.classList.add("ready"));
 }
 
@@ -948,7 +955,7 @@ function renderSecrets() {
         <div class="acts">
           ${x.kind === "tracked" ? `<button class="btn sm" data-leak="untrack" data-id="${x.id}">Stop tracking</button>` : ""}
           ${x.kind === "unignored" ? `<button class="btn sm" data-leak="ignore" data-id="${x.id}">Add to .gitignore</button>` : ""}
-          ${x.kind === "loose" ? `<button class="btn sm" data-leak="trash" data-id="${x.id}">${icon("trash")}Move to Trash</button>` : ""}
+          ${x.kind === "loose" ? `<button class="btn sm" data-leak="trash" data-id="${x.id}">${icon("trash")}Move to ${P.trash}</button>` : ""}
           <button class="btn ghost sm" data-reveal="${esc(x.path)}">Show</button>
         </div>
         <div class="p">${esc(x.repo ? `${x.name} · ${shortPath(x.display, 80)}` : shortPath(x.display, 90))}</div>
@@ -980,7 +987,7 @@ function renderConvert() {
   if (!fmts.includes(S.convTo)) S.convTo = fmts[0];
   const kindIcon = n => /\.(png|jpe?g|heic|heif|webp|tiff?|gif|bmp)$/i.test(n) ? "image" : "doc";
   app.innerHTML = `
-    <div class="page-h"><div><h1>Convert</h1><p>One click to turn documents and images into another format. Converted files are saved next to the original${native ? "" : ". PDF needs Radar.app"}.</p></div>
+    <div class="page-h"><div><h1>Convert</h1><p>One click to turn documents and images into another format. Converted files are saved next to the original${native ? "" : P.os === "mac" ? ". PDF needs Radar.app" : ". Documents and PDF need Microsoft Word or LibreOffice"}.</p></div>
       <div class="pills" role="group" aria-label="Convert dropped files to">${fmts.map(f => `<button data-conv-to="${f}" aria-pressed="${S.convTo === f}">${f.toUpperCase()}</button>`).join("")}</div></div>
     <div class="drop" id="drop" role="button" tabindex="0" aria-label="Choose files to convert">
       <span class="chip" style="--c:var(--accent)">${icon("convert")}</span>
@@ -1003,7 +1010,7 @@ async function convertOne(path, to, btn) {
   btn?.classList.remove("loading");
   if (!res.ok) return toast(res.error || "Couldn't convert that file.", true);
   const out = res.outputs[0];
-  toast(`Saved ${out.split("/").pop()}${res.outputs.length > 1 ? ` and ${res.outputs.length - 1} more` : ""}`, false, { label: "Show", fn: () => reveal(out) });
+  toast(`Saved ${out.split(/[\\/]/).pop()}${res.outputs.length > 1 ? ` and ${res.outputs.length - 1} more` : ""}`, false, { label: "Show", fn: () => reveal(out) });
   S.conv = null;
   if (S.view === "convert") renderConvert();
 }
@@ -1014,7 +1021,7 @@ async function convertFiles(files) {
     toast(`Converting ${f.name}…`);
     const r = await fetch(`/api/convert/upload?name=${encodeURIComponent(f.name)}&to=${S.convTo}`, { method: "POST", headers: { "X-Radar-Token": TOKEN }, body: f });
     const res = await r.json();
-    if (res.ok) toast(`Saved ${res.outputs[0].split("/").pop()} to Downloads`, false, { label: "Show", fn: () => reveal(res.outputs[0]) });
+    if (res.ok) toast(`Saved ${res.outputs[0].split(/[\\/]/).pop()} to Downloads`, false, { label: "Show", fn: () => reveal(res.outputs[0]) });
     else toast(`${f.name}: ${res.error}`, true);
   }
   S.conv = null;
@@ -1051,7 +1058,7 @@ function renderPalette() {
     : `<div class="none">No project matches “${esc(pal.q)}”.</div>`;
   if (!el.firstChild) {
     el.innerHTML = `<div class="pal" role="dialog" aria-label="Go to project"><input id="palq" placeholder="Go to project…" autocomplete="off" spellcheck="false"><div id="pallist"></div>
-      <footer><span><kbd>↵</kbd>Open in ${S.proj?.editor ? "VS Code" : "editor"}</span><span><kbd>⌘↵</kbd>Terminal</span><span><kbd>⌥↵</kbd>Finder</span><span><kbd>⇧↵</kbd>Show card</span><span><kbd>esc</kbd>Close</span></footer></div>`;
+      <footer><span><kbd>↵</kbd>Open in ${S.proj?.editor ? "VS Code" : "editor"}</span><span><kbd>${P.mod}↵</kbd>${P.terminal}</span><span><kbd>${P.os === "mac" ? "⌥" : "Alt+"}↵</kbd>${P.files}</span><span><kbd>⇧↵</kbd>Show card</span><span><kbd>esc</kbd>Close</span></footer></div>`;
     $("#palq").addEventListener("input", e => { pal.q = e.target.value; pal.i = 0; renderPalette(); });
   }
   $("#pallist").innerHTML = ul;
@@ -1079,7 +1086,7 @@ function render() {
   document.body.classList.toggle("view-cleanup", S.view === "cleanup");
   document.body.classList.toggle("view-other", S.view !== "projects");
   document.querySelectorAll("#views [data-view]").forEach(b => b.setAttribute("aria-selected", b.dataset.view === S.view));
-  if (S.proj) window.webkit?.messageHandlers?.radar?.postMessage({ atRisk: active().filter(r => laneOf(r).id !== "safe").length });
+  if (S.proj) nativePost({ atRisk: active().filter(r => laneOf(r).id !== "safe").length });
   ({ projects: renderProjects, cleanup: renderCleanup, secrets: renderSecrets, convert: renderConvert })[S.view]();
   renderActionbar();
 }
@@ -1099,6 +1106,8 @@ async function loadProjects(refresh) {
   const r = await fetch("/api/scan" + (refresh ? "?refresh=1" : ""));
   S.proj = await r.json();
   S.hidden = new Set(S.proj.hidden || []);
+  if (S.proj.platform) Object.assign(P, S.proj.platform);
+  $("#rescan").title = `Rescan (${P.mod}R)`;
 }
 async function rescan() {
   const b = $("#rescan");
@@ -1111,13 +1120,13 @@ async function rescan() {
     if (S.view === "convert") S.conv = null;
     await Promise.all(jobs);
     transition(render); toast("Up to date.");
-  } catch { toast("Couldn't reach Radar's engine. Try ⌘⇧R.", true); }
+  } catch { toast(`Couldn't reach Radar's engine. Try ${P.mod}${P.os === "mac" ? "⇧" : "Shift+"}R.`, true); }
   b.classList.remove("spinning"); b.disabled = false;
 }
 window.rescan = rescan;  // ⌘R in Radar.app
 
 function setTheme(t) {
-  transition(() => { document.documentElement.dataset.theme = t; store.set("theme", t); window.webkit?.messageHandlers?.radar?.postMessage({ theme: t }); });
+  transition(() => { document.documentElement.dataset.theme = t; store.set("theme", t); nativePost({ theme: t }); });
 }
 
 /* live updates pushed by the engine */
@@ -1297,6 +1306,7 @@ $("#q").addEventListener("input", e => {
 $("#q").addEventListener("blur", () => { if (!$("#q").value) $("#search").classList.remove("open"); });
 document.addEventListener("keydown", e => {
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); return pal.open ? closePalette() : openPalette(); }
+  if ((e.ctrlKey && !e.metaKey && e.key.toLowerCase() === "r") || e.key === "F5") { e.preventDefault(); return rescan(); }   // Windows/Linux; ⌘R is the Mac app's menu
   if (pal.open) {
     if (e.key === "Escape") { e.preventDefault(); return closePalette(); }
     if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); pal.i = Math.max(0, Math.min(pal.list.length - 1, pal.i + (e.key === "ArrowDown" ? 1 : -1))); return renderPalette(); }
@@ -1315,7 +1325,7 @@ document.addEventListener("keydown", e => {
 });
 
 render();
-loadProjects(false).then(() => transition(render)).catch(() => { $("#app").innerHTML = `<div class="empty"><b>Can't reach Radar's engine</b>Restart it with ⌘⇧R, or run python3 radar.py serve.</div>`; });
+loadProjects(false).then(() => transition(render)).catch(() => { $("#app").innerHTML = `<div class="empty"><b>Can't reach Radar's engine</b>Restart it from the app menu, or run python3 radar.py serve.</div>`; });
 connectEvents();
 
 </script>

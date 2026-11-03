@@ -1,8 +1,8 @@
-"""Downloads sweep for Project Radar: sort ~/Downloads into things you can
+"""Downloads and Desktop sweep for Radar: sort a folder into things you can
 safely bin (installers for apps you already have, duplicate copies,
-unfinished downloads, archives you've already unpacked) and things worth a
-look (big videos, files that look like secrets). Nothing moves until you
-pick it, and everything goes to the Trash, never deleted.
+unfinished downloads, archives you've already unpacked, old screenshots) and
+things worth a look (big videos, files that look like secrets). Nothing moves
+until you pick it, and everything goes to the Trash or Recycle Bin, with undo.
 """
 import fnmatch
 import hashlib
@@ -10,20 +10,25 @@ import json
 import os
 import re
 import shutil
-import subprocess
 import time
 from pathlib import Path
 
+import osutil
+
 HOME = Path.home()
-# State lives outside the code so the code can sit read-only inside Radar.app.
-DATA_DIR = Path(os.environ.get("RADAR_DATA") or HOME / "Library/Application Support/Project Radar")
+# State lives outside the code so the code can sit read-only inside the app.
+DATA_DIR = osutil.data_dir()
 LOG_FILE = DATA_DIR / "sweep-log.json"
 
-INSTALLER_EXT = {".dmg", ".pkg", ".mpkg", ".xip", ".ipk", ".apk", ".msi", ".exe", ".appimage", ".deb"}
+MAC_INSTALLERS = {".dmg", ".pkg", ".mpkg", ".xip"}
+WIN_INSTALLERS = {".exe", ".msi", ".msix", ".msixbundle", ".appx", ".appxbundle"}
+OTHER_INSTALLERS = {".ipk", ".apk", ".appimage", ".deb", ".rpm"}
+INSTALLER_EXT = MAC_INSTALLERS | WIN_INSTALLERS | OTHER_INSTALLERS
+OWN_INSTALLERS = WIN_INSTALLERS if osutil.IS_WIN else MAC_INSTALLERS if osutil.IS_MAC else {".appimage", ".deb", ".rpm"}
 ARCHIVE_EXT = {".zip", ".tar", ".gz", ".tgz", ".bz2", ".xz", ".7z", ".rar"}
 VIDEO_EXT = {".mkv", ".mp4", ".mov", ".avi", ".webm", ".m4v", ".wmv"}
 PARTIAL_EXT = {".crdownload", ".part", ".partial", ".download", ".opdownload"}
-TOOL_HINTS = {"macos", "darwin", "arm", "aarch", "amd", "x"}  # as tokens: arm64 -> "arm"
+TOOL_HINTS = {"macos", "darwin", "windows", "win", "linux", "arm", "aarch", "amd", "x"}  # as tokens: arm64 -> "arm"
 SENSITIVE = ["client_secret*.json", "credentials*.json", "*service-account*.json", "*.pem", "*.key",
              "*.p12", "*.pfx", ".env", "*.env", "id_rsa*", "id_ed25519*", "*.ovpn", "*.mobileprovision"]
 BIG_VIDEO = 200 * 1024 * 1024
@@ -41,7 +46,8 @@ CATEGORIES = {
     "project":   ("Project folders", "Folders tracked in git. Manage them in Projects; they're never ticked here."),
     "other":     ("Everything else", "Not sorted into a group. Pick anything you don't need."),
 }
-SCREENSHOT = re.compile(r"^(Screenshot|Screen Shot|Screen Recording|CleanShot) ", re.I)
+# macOS: "Screenshot 2026-10-29 at 22.19.36.png"; Windows Snipping Tool: "Screenshot 2026-11-03 001122.png"
+SCREENSHOT = re.compile(r"^(Screenshot|Screen Shot|Screen Recording|CleanShot)[ _]", re.I)
 OLD_SCREENSHOT_DAYS = 30
 
 
@@ -51,28 +57,8 @@ def tokens(name):
     return re.findall(r"[a-z]+", name.lower())
 
 
-def installed_apps():
-    names = {}
-    for d in ("/Applications", str(HOME / "Applications"), "/System/Applications"):
-        try:
-            for e in os.scandir(d):
-                if e.name.endswith(".app"):
-                    t = tokens(e.name[:-4])
-                    if t:
-                        names.setdefault(t[0], e.name)
-        except OSError:
-            pass
-    return names
-
-
-def size_of(path):
-    if os.path.isfile(path) or os.path.islink(path):
-        return os.lstat(path).st_size
-    try:
-        r = subprocess.run(["du", "-sk", path], capture_output=True, text=True, timeout=120)
-        return int(r.stdout.split()[0]) * 1024
-    except Exception:
-        return 0
+installed_apps = osutil.installed_apps
+size_of = osutil.dir_size
 
 
 def file_hash(path, limit=None):
@@ -183,7 +169,7 @@ def classify(folder):
             app = apps.get(first)
             if app:
                 i.update(category="installer", suggest=True, note=f"{app} is already installed")
-            elif ext in {".ipk", ".apk", ".exe", ".msi"}:
+            elif ext not in OWN_INSTALLERS and not name.endswith(".app"):
                 i.update(category="installer", note="Installer for another device or OS")
             elif name.endswith(".app"):
                 i.update(category="installer", note="An app sitting in Downloads. Move it to Applications if you use it")
@@ -208,7 +194,7 @@ def scan(folder):
     items.sort(key=lambda i: -i["size"])
     return {
         "folder": str(folder),
-        "display": "~/" + os.path.relpath(folder, HOME) if str(folder).startswith(str(HOME)) else str(folder),
+        "display": osutil.display(folder),
         "scanned_at": int(time.time()),
         "seconds": round(time.time() - t0, 1),
         "categories": [{"id": k, "title": v[0], "blurb": v[1]} for k, v in CATEGORIES.items()],
@@ -219,25 +205,7 @@ def scan(folder):
 
 # ---------------------------------------------------------------- trash + undo
 
-def to_trash(path):
-    """Use macOS's own `trash` command (macOS 15+), which needs no Finder
-    permission and reports where the item landed. Fall back to a plain move."""
-    if os.path.exists("/usr/bin/trash"):
-        r = subprocess.run(["/usr/bin/trash", "-v", "-s", path], capture_output=True, text=True, timeout=300)
-        m = re.search(r' to "(.+)"\s*$', r.stdout)
-        if r.returncode == 0 and m:
-            return m[1]
-        if r.returncode != 0:
-            raise OSError((r.stderr or r.stdout).strip() or "trash failed")
-    trash = HOME / ".Trash"
-    dest = trash / os.path.basename(path)
-    n = 1
-    while dest.exists():
-        stem, ext = os.path.splitext(os.path.basename(path))
-        dest = trash / f"{stem} {n}{ext}"
-        n += 1
-    shutil.move(path, dest)
-    return str(dest)
+to_trash = osutil.trash   # macOS Trash or Windows Recycle Bin; returns an undo token
 
 
 def read_log():
@@ -266,7 +234,8 @@ def sweep(paths):
         DATA_DIR.mkdir(parents=True, exist_ok=True)
         LOG_FILE.write_text(json.dumps(log, indent=2))
     freed = sum(m["size"] for m in moved)
-    msg = f"Moved {len(moved)} item(s), {human(freed)}, to the Trash. Empty the Trash to free the space."
+    bin_ = osutil.LABELS["trash"]
+    msg = f"Moved {len(moved)} item(s), {human(freed)}, to the {bin_}. Empty the {bin_} to free the space."
     if failed:
         msg += f" {len(failed)} couldn't be moved: " + "; ".join(f"{os.path.basename(f['path'])} ({f['error']})" for f in failed)
     return {"ok": not failed, "message": msg, "moved": len(moved)}
@@ -278,8 +247,11 @@ def undo():
         return {"ok": False, "error": "Nothing to undo."}
     back, missing = 0, 0
     for m in log[-1]["items"]:
-        if os.path.exists(m["to"]) and not os.path.exists(m["from"]):
-            shutil.move(m["to"], m["from"])
+        try:
+            restored = osutil.untrash(m["to"], m["from"])
+        except (OSError, RuntimeError):
+            restored = False
+        if restored:
             back += 1
         else:
             missing += 1
@@ -287,7 +259,7 @@ def undo():
     LOG_FILE.write_text(json.dumps(log, indent=2))
     msg = f"Put back {back} item(s)."
     if missing:
-        msg += f" {missing} weren't in the Trash any more (already emptied?)."
+        msg += f" {missing} weren't in the {osutil.LABELS['trash']} any more (already emptied?)."
     return {"ok": True, "message": msg}
 
 

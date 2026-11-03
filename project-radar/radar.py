@@ -36,6 +36,7 @@ from urllib.parse import parse_qs, urlparse
 import convert
 import downloads
 import leaks
+import osutil
 import storage
 
 HOME = Path.home()
@@ -44,7 +45,7 @@ DATA_DIR = downloads.DATA_DIR
 
 # Folders never worth descending into while looking for repos.
 SKIP_DIRS = {
-    "node_modules", "Library", "Applications", "Music", "Pictures", "Movies",
+    "node_modules", "Library", "Applications", "Music", "Pictures", "Movies", "AppData", "$Recycle.Bin",
     "Public", "venv", "__pycache__", "Pods", "DerivedData", "site-packages",
     "dist", "build", "target", ".next", ".nuxt", ".turbo",
 }
@@ -101,7 +102,7 @@ def find_repos(roots):
 def git(repo, *args, timeout=30, input=None):
     r = subprocess.run(
         ["git", "-C", repo, "-c", "core.quotePath=false", *args],
-        capture_output=True, text=True, timeout=timeout, input=input,
+        capture_output=True, text=True, timeout=timeout, input=input, encoding="utf-8", errors="replace", **osutil.quiet(),
     )
     return r.returncode, r.stdout, r.stderr
 
@@ -116,12 +117,7 @@ def normalize_remote(url):
     return re.sub(r"\.git$", "", u)
 
 
-def dir_size(path):
-    try:
-        r = subprocess.run(["du", "-sk", path], capture_output=True, text=True, timeout=120)
-        return int(r.stdout.split()[0]) * 1024
-    except Exception:
-        return 0
+dir_size = osutil.dir_size
 
 
 def find_node_modules(repo, max_depth=4):
@@ -147,7 +143,7 @@ def inspect(repo, with_sizes=True):
     info = {
         "path": repo,
         "name": os.path.basename(repo),
-        "display": "~/" + os.path.relpath(repo, HOME) if repo.startswith(str(HOME)) else repo,
+        "display": osutil.display(repo),
         "branch": None, "upstream": None, "ahead": 0, "behind": 0,
         "has_commits": True, "remote": None, "remote_url": None,
         "staged": 0, "modified": 0, "untracked": 0, "conflicts": 0, "dirty": 0,
@@ -317,7 +313,8 @@ def scan(roots, with_sizes=True):
         "scanned_at": int(time.time()),
         "seconds": round(time.time() - t0, 1),
         "roots": [str(r) for r in roots],
-        "blocked": ["~/" + os.path.relpath(b, HOME) if b.startswith(str(HOME)) else b for b in blocked],
+        "blocked": [osutil.display(b) for b in blocked],
+        "platform": osutil.info(),
         "repos": repos,
         "gh": bool(shutil.which("gh")),
         "editor": bool(shutil.which("code")),
@@ -417,7 +414,7 @@ def create_github(repo, name):
     name = re.sub(r"[^A-Za-z0-9._-]+", "-", name.strip()).strip("-") or "project"
     r = subprocess.run(
         ["gh", "repo", "create", name, "--private", "--source", repo, "--remote", "origin", "--push"],
-        capture_output=True, text=True, timeout=300,
+        capture_output=True, text=True, timeout=300, **osutil.quiet(),
     )
     if r.returncode != 0:
         return {"ok": False, "error": (r.stderr or r.stdout).strip()}
@@ -425,34 +422,17 @@ def create_github(repo, name):
 
 
 def trash_node_modules(repo):
-    trash = HOME / ".Trash"
-    moved, freed = 0, 0
-    for nm in find_node_modules(repo):
-        size = dir_size(nm)
-        rel = os.path.relpath(nm, repo).replace(os.sep, "_")
-        dest = trash / f"{os.path.basename(repo)}_{rel}_{int(time.time())}"
-        try:
-            os.rename(nm, dest)  # same volume, so this is instant
-        except OSError:
-            shutil.move(nm, dest)
-        moved += 1
-        freed += size
-    if not moved:
+    """Through the shared sweep, so Undo in Cleanup can put them back."""
+    found = find_node_modules(repo)
+    if not found:
         return {"ok": False, "error": "No node_modules folders found."}
-    return {"ok": True, "message": f"Moved {moved} node_modules folder(s), {human(freed)}, to the Trash. "
-                                   "Run npm install to get them back; empty the Trash to free the space."}
+    res = downloads.sweep(found)
+    res["message"] += " Run npm install to get them back."
+    return res
 
 
 def open_in(repo, where):
-    if where == "finder":
-        subprocess.Popen(["open", repo])
-    elif where == "editor":
-        if shutil.which("code"):
-            subprocess.Popen(["code", repo])
-        else:
-            subprocess.Popen(["open", repo])
-    elif where == "terminal":
-        subprocess.Popen(["open", "-a", "Terminal", repo])
+    {"finder": osutil.open_path, "editor": osutil.open_editor, "terminal": osutil.open_terminal}.get(where, osutil.open_path)(repo)
     return {"ok": True}
 
 
@@ -615,7 +595,7 @@ class State:
     ready = threading.Event()
     data = None
     roots = []
-    dl_dir = HOME / "Downloads"
+    dl_dir = osutil.user_folder("Downloads")
     sweeps, sweep_locks = {}, {k: threading.Lock() for k in ("downloads", "desktop", "storage")}
     leaks, outputs = None, set()
     git_sigs = {}
@@ -701,7 +681,7 @@ def on_changed(paths):
             continue
         if p.startswith(str(State.dl_dir)):
             kinds.add("downloads")
-        if p.startswith(str(HOME / "Desktop") + os.sep):
+        if p.startswith(str(osutil.user_folder("Desktop")) + os.sep):
             kinds.add("desktop")
         rp = repo_for(p)
         if rp:
@@ -773,7 +753,7 @@ def get_sweep(kind, refresh=False):
             if kind == "downloads":
                 State.sweeps[kind] = downloads.scan(State.dl_dir)
             elif kind == "desktop":
-                State.sweeps[kind] = downloads.scan(HOME / "Desktop")
+                State.sweeps[kind] = downloads.scan(osutil.user_folder("Desktop"))
             else:
                 State.ready.wait()
                 with State.lock:
@@ -871,7 +851,7 @@ class Handler(BaseHTTPRequestHandler):
         if u.path == "/api/convert/recent":
             items = convert.recent()
             State.outputs |= {i["path"] for i in items}
-            return self._send(200, {"items": items, "native": bool(convert.app_bin())})
+            return self._send(200, {"items": items, "native": convert.native()})
         self._send(404, {"error": "not found"})
 
     def do_POST(self):
@@ -1014,7 +994,7 @@ class Handler(BaseHTTPRequestHandler):
         path = body.get("path")
         if path not in known_paths() or not os.path.exists(path):
             return self._send(400, {"ok": False, "error": "Unknown file."})
-        subprocess.Popen(["open", "-R", path] if body.get("how") != "open" else ["open", path])
+        (osutil.open_path if body.get("how") == "open" else osutil.reveal)(path)
         self._send(200, {"ok": True})
 
 
@@ -1116,7 +1096,7 @@ def main():
     ap = argparse.ArgumentParser(description="Find git repos with work that isn't backed up.")
     ap.add_argument("command", nargs="?", default="summary", choices=["summary", "downloads", "serve", "notify"])
     ap.add_argument("--root", action="append", help="folder to scan (repeatable; default: your home folder)")
-    ap.add_argument("--downloads", default=str(HOME / "Downloads"), help="folder the Downloads sweep looks at")
+    ap.add_argument("--downloads", default=str(osutil.user_folder("Downloads")), help="folder the Downloads sweep looks at")
     ap.add_argument("--port", type=int, default=8765)
     ap.add_argument("--no-open", action="store_true", help="don't open the browser")
     ap.add_argument("--json", action="store_true", help="print the full scan as JSON")
@@ -1138,7 +1118,8 @@ def main():
         risky = [r for r in data["repos"] if r["at_risk"] and "stale" not in r["reasons"]]
         local = sum(1 for r in risky if "local-only" in r["reasons"])
         if risky:
-            msg = f"{len(risky)} repos have work that isn't backed up" + (f", {local} exist only on this Mac" if local else "")
+            here = "this Mac" if osutil.IS_MAC else "this PC"
+            msg = f"{len(risky)} repos have work that isn't backed up" + (f", {local} exist only on {here}" if local else "")
         else:
             msg = "Every active repo is committed and pushed."
         if data["blocked"]:
@@ -1147,8 +1128,7 @@ def main():
         if os.environ.get("RADAR_NOTIFY_JSON"):   # Radar.app posts a native notification itself
             print("RADAR_NOTIFY=" + json.dumps({"title": "Radar", "body": msg, "count": len(risky), "localOnly": local}), flush=True)
         else:
-            subprocess.run(["osascript", "-e", "on run argv", "-e",
-                            'display notification (item 1 of argv) with title "Project Radar"', "-e", "end run", msg])
+            osutil.notify("Radar", msg)
         print(time.strftime("%Y-%m-%d %H:%M"), msg)
     else:
         summary(data)

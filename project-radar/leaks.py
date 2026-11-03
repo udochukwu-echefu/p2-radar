@@ -10,12 +10,14 @@ import subprocess
 import time
 from pathlib import Path
 
+import osutil
+
 HOME = Path.home()
 PATTERNS = [".env", ".env.*", "*.env", "*.pem", "*.key", "*.p12", "*.pfx", "id_rsa", "id_rsa.*", "id_ed25519", "id_ed25519.*",
             "client_secret*.json", "credentials*.json", "*service-account*.json", "*serviceaccount*.json",
             "*.keystore", "*.jks", ".pypirc", "*.ovpn", "*.mobileprovision", "secrets.y*ml", ".netrc"]
 SAFE = {".env.example", ".env.sample", ".env.template", ".env.defaults", ".env.dist", "example.env", "sample.env"}
-LOOSE_ROOTS = [HOME / "Desktop", HOME / "Documents", HOME / "Downloads"]
+LOOSE_ROOTS = [osutil.user_folder(n) for n in ("Desktop", "Documents", "Downloads")]
 
 
 def looks_secret(path):
@@ -26,7 +28,8 @@ def looks_secret(path):
 
 
 def _git(repo, *args, timeout=30):
-    r = subprocess.run(["git", "-C", repo, "-c", "core.quotePath=false", *args], capture_output=True, text=True, timeout=timeout)
+    r = subprocess.run(["git", "-C", repo, "-c", "core.quotePath=false", *args], capture_output=True, text=True,
+                       encoding="utf-8", errors="replace", timeout=timeout, **osutil.quiet())
     return r.returncode, r.stdout, r.stderr
 
 
@@ -38,10 +41,10 @@ def _finding(kind, path, repo=None, rel=None, remote=None, name=None):
     sev = {"tracked": "high" if remote else "medium", "unignored": "medium", "loose": "low"}[kind]
     return {"id": _fid(kind, path), "kind": kind, "severity": sev, "path": path, "repo": repo, "rel": rel,
             "remote": remote, "name": name or os.path.basename(path),
-            "display": "~/" + os.path.relpath(path, HOME) if path.startswith(str(HOME)) else path}
+            "display": osutil.display(path)}
 
 
-def scan(repos):
+def scan(repos, loose_roots=None):
     t0 = time.time()
     findings = []
     for r in repos or []:
@@ -53,12 +56,12 @@ def scan(repos):
             continue
         for rel in filter(None, tracked.split("\0")):
             if looks_secret(rel) and "/node_modules/" not in f"/{rel}":
-                findings.append(_finding("tracked", os.path.join(repo, rel), repo, rel, r.get("remote_url"), r["name"]))
+                findings.append(_finding("tracked", os.path.normpath(os.path.join(repo, rel)), repo, rel, r.get("remote_url"), r["name"]))
         for rel in filter(None, others.split("\0")):
             if looks_secret(rel) and "/node_modules/" not in f"/{rel}":
-                findings.append(_finding("unignored", os.path.join(repo, rel), repo, rel, None, r["name"]))
+                findings.append(_finding("unignored", os.path.normpath(os.path.join(repo, rel)), repo, rel, None, r["name"]))
     repo_paths = [r["path"] for r in repos or []]
-    for root in LOOSE_ROOTS:
+    for root in LOOSE_ROOTS if loose_roots is None else loose_roots:
         for dirpath, dirs, files in os.walk(root):
             depth = os.path.relpath(dirpath, root).count(os.sep)
             dirs[:] = [d for d in dirs if not d.startswith(".") and d != "node_modules"
