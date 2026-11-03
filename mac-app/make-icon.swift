@@ -1,5 +1,5 @@
-// Draws Radar's 1024x1024 app icon: a dark squircle holding a dot-matrix
-// radar with a blue sweep and a few status blips. Usage: swift make-icon.swift out.png
+// Draws Radar's 1024x1024 app icon: a dark squircle holding the letter R in a
+// dot matrix, lit blue where a radar sweep passes over it, with one red blip. Usage: swift make-icon.swift out.png
 
 import AppKit
 
@@ -27,73 +27,42 @@ ctx.restoreGState()
 shape.addClip()
 NSGradient(colors: [rgb(0x26262d), rgb(0x0b0b0e)])!.draw(in: body, angle: -90)
 
-let c = CGPoint(x: size / 2, y: size / 2)
-let R: CGFloat = 318
-
-// Faint range rings.
-for r in [R * 0.5, R] {
-    let ring = NSBezierPath(ovalIn: NSRect(x: c.x - r, y: c.y - r, width: r * 2, height: r * 2))
-    ring.lineWidth = 3
-    rgb(0xffffff, 0.06).setStroke()
-    ring.stroke()
+// The artwork is drawn on a 64-unit grid (the same one as the dashboard's SVG
+// logo, y pointing down) and mapped onto the 824pt body.
+let unit = body.width / 64
+func box(_ x: CGFloat, _ y: CGFloat, _ w: CGFloat = 5) -> NSRect {
+    NSRect(x: body.minX + x * unit, y: body.maxY - (y + w) * unit, width: w * unit, height: w * unit)
+}
+func dots(_ cells: [(CGFloat, CGFloat)], _ color: NSColor) {
+    color.setFill()
+    for (x, y) in cells { NSBezierPath(roundedRect: box(x, y), xRadius: 1.5 * unit, yRadius: 1.5 * unit).fill() }
 }
 
-// Sweep: leading edge at 52° (top right), trailing 80° behind it.
-let lead: CGFloat = 52 * .pi / 180
-let trail: CGFloat = 80 * .pi / 180
-func sweepStrength(_ p: CGPoint) -> CGFloat {
-    var a = atan2(p.y - c.y, p.x - c.x)
-    var behind = lead - a
-    while behind < 0 { behind += 2 * .pi }
-    while behind > 2 * .pi { behind -= 2 * .pi }
-    a = behind
-    return a <= trail ? 1 - a / trail : 0
-}
-
-// Soft sweep glow under the dots.
+// Sweep: a soft blue wedge from the centre, leading edge at 52°, 80° wide.
+let c = CGPoint(x: body.midX, y: body.midY)
 ctx.saveGState()
 let wedge = NSBezierPath()
 wedge.move(to: c)
-wedge.appendArc(withCenter: c, radius: R + 10, startAngle: (lead - trail) * 180 / .pi, endAngle: lead * 180 / .pi)
+wedge.appendArc(withCenter: c, radius: 26 * unit, startAngle: -28, endAngle: 52)
 wedge.close()
 wedge.addClip()
-let glow = NSGradient(colors: [rgb(0x4f7cff, 0.0), rgb(0x4f7cff, 0.22)])!
-glow.draw(fromCenter: c, radius: 0, toCenter: c, radius: R + 10, options: [])
+NSGradient(colors: [rgb(0x6b92ff, 0.04), rgb(0x6b92ff, 0.26)])!.draw(fromCenter: c, radius: 0, toCenter: c, radius: 26 * unit, options: [])
 ctx.restoreGState()
 
-// Dot matrix.
-let step: CGFloat = 53
-for i in -6...6 {
-    for j in -6...6 {
-        let p = CGPoint(x: c.x + CGFloat(i) * step, y: c.y + CGFloat(j) * step)
-        let d = hypot(p.x - c.x, p.y - c.y)
-        if d > R - 20 || (i == 0 && j == 0) { continue }
-        let s = sweepStrength(p)
-        let base = 0.10 + 0.16 * (1 - d / R)
-        let r: CGFloat = 10.5
-        let rect = NSRect(x: p.x - r, y: p.y - r, width: r * 2, height: r * 2)
-        if s > 0 {
-            rgb(0x6b92ff, base + 0.75 * s).setFill()
-        } else {
-            rgb(0xffffff, base).setFill()
-        }
-        NSBezierPath(roundedRect: rect, xRadius: 4.5, yRadius: 4.5).fill()
-    }
-}
+// A 5x7 dot matrix spelling R. Cells the sweep passes over are blue.
+dots([(22.5, 15.5), (29.5, 15.5), (36.5, 15.5), (22.5, 22.5), (29.5, 22.5), (22.5, 36.5), (36.5, 36.5),
+      (22.5, 43.5), (29.5, 43.5), (43.5, 43.5), (22.5, 50.5), (29.5, 50.5), (36.5, 50.5)], rgb(0xffffff, 0.10))
+dots([(36.5, 22.5), (43.5, 29.5), (43.5, 36.5)], rgb(0x6b92ff, 0.40))
+dots([(15.5, 8.5), (22.5, 8.5), (29.5, 8.5), (36.5, 8.5), (15.5, 15.5), (15.5, 22.5), (15.5, 29.5), (22.5, 29.5),
+      (29.5, 29.5), (15.5, 36.5), (29.5, 36.5), (15.5, 43.5), (36.5, 43.5), (15.5, 50.5), (43.5, 50.5)], rgb(0xf2f2f2))
+dots([(43.5, 15.5), (43.5, 22.5), (36.5, 29.5)], rgb(0x6b92ff))
 
-func blip(_ i: Int, _ j: Int, _ color: NSColor, _ r: CGFloat) {
-    let p = CGPoint(x: c.x + CGFloat(i) * step, y: c.y + CGFloat(j) * step)
-    ctx.saveGState()
-    ctx.setShadow(offset: .zero, blur: 30, color: color.withAlphaComponent(0.9).cgColor)
-    color.setFill()
-    NSBezierPath(roundedRect: NSRect(x: p.x - r, y: p.y - r, width: r * 2, height: r * 2), xRadius: r * 0.42, yRadius: r * 0.42).fill()
-    ctx.restoreGState()
-}
-
-blip(3, 4, rgb(0xff5f57), 19)    // only on this Mac
-blip(-4, 2, rgb(0xffb547), 15)   // unsaved changes
-blip(-2, -4, rgb(0x3ddc84), 13)  // backed up
-blip(0, 0, rgb(0x6b92ff), 22)    // you
+// The blip: a project that exists only on this computer.
+ctx.saveGState()
+ctx.setShadow(offset: .zero, blur: 34, color: rgb(0xff5f57, 0.85).cgColor)
+rgb(0xff5f57).setFill()
+NSBezierPath(roundedRect: box(42.5, 7.5, 7), xRadius: 2 * unit, yRadius: 2 * unit).fill()
+ctx.restoreGState()
 
 // Top-edge highlight.
 let hl = NSBezierPath(roundedRect: body.insetBy(dx: 1.5, dy: 1.5), xRadius: 184, yRadius: 184)
