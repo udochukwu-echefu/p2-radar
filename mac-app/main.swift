@@ -194,6 +194,39 @@ func jsString(_ s: String) -> String {
     return d.flatMap { String(data: $0, encoding: .utf8) }.map { String($0.dropFirst().dropLast()) } ?? "\"\""
 }
 
+// Radar's app icon reduced to a menu bar template: the squircle outline,
+// the dot matrix inside it with the sweep's dots solid and the rest faint,
+// and the centre dot and one blip drawn larger.
+func menuBarIcon() -> NSImage {
+    let img = NSImage(size: NSSize(width: 18, height: 18), flipped: false) { _ in
+        NSColor.black.setStroke()
+        let body = NSBezierPath(roundedRect: NSRect(x: 0.9, y: 0.9, width: 16.2, height: 16.2), xRadius: 4.6, yRadius: 4.6)
+        body.lineWidth = 1.4
+        body.stroke()
+        let c = CGPoint(x: 9, y: 9), step: CGFloat = 2.75
+        let lead: CGFloat = 52 * .pi / 180, trail: CGFloat = 80 * .pi / 180
+        func square(_ p: CGPoint, _ s: CGFloat, _ alpha: CGFloat) {
+            NSColor.black.withAlphaComponent(alpha).setFill()
+            NSBezierPath(roundedRect: NSRect(x: p.x - s / 2, y: p.y - s / 2, width: s, height: s), xRadius: s * 0.3, yRadius: s * 0.3).fill()
+        }
+        for i in -2...2 {
+            for j in -2...2 {
+                let p = CGPoint(x: c.x + CGFloat(i) * step, y: c.y + CGFloat(j) * step)
+                if hypot(p.x - c.x, p.y - c.y) > 6.3 || (i == 0 && j == 0) || (i == 1 && j == 2) { continue }
+                var behind = lead - atan2(p.y - c.y, p.x - c.x)
+                while behind < 0 { behind += 2 * .pi }
+                square(p, 1.6, behind <= trail ? 1 : 0.4)
+            }
+        }
+        square(c, 2.6, 1)                                               // you
+        square(CGPoint(x: c.x + step, y: c.y + 2 * step), 2.5, 1)       // a project only on this Mac
+        return true
+    }
+    img.isTemplate = true
+    img.accessibilityDescription = "Radar"
+    return img
+}
+
 final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler,
                          NSMenuDelegate, UNUserNotificationCenterDelegate {
     var window: NSWindow!
@@ -360,9 +393,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     func buildStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let b = statusItem.button {
-            let img = NSImage(systemSymbolName: "dot.radiowaves.left.and.right", accessibilityDescription: "Radar")
-            img?.isTemplate = true
-            b.image = img
+            b.image = menuBarIcon()
             b.imagePosition = .imageLeading
         }
         let menu = NSMenu()
