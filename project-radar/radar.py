@@ -99,10 +99,16 @@ def find_repos(roots):
     return sorted(set(found)), sorted(blocked)
 
 
+# GIT_OPTIONAL_LOCKS=0: `git status` would otherwise create and delete .git/index.lock,
+# which the app's file watcher reports as a change, which runs `git status` again.
+GIT_ENV = {**os.environ, "GIT_OPTIONAL_LOCKS": "0"}
+
+
 def git(repo, *args, timeout=30, input=None):
     r = subprocess.run(
         ["git", "-C", repo, "-c", "core.quotePath=false", *args],
-        capture_output=True, text=True, timeout=timeout, input=input, encoding="utf-8", errors="replace", **osutil.quiet(),
+        capture_output=True, text=True, timeout=timeout, input=input, encoding="utf-8", errors="replace",
+        env=GIT_ENV, **osutil.quiet(),
     )
     return r.returncode, r.stdout, r.stderr
 
@@ -534,7 +540,7 @@ def bulk_backup(items):
                 ok, err = res["ok"], res.get("error")
         except subprocess.TimeoutExpired:
             ok, err = False, "Timed out"
-        updated = refresh_one(p)
+        updated, _ = refresh_one(p)
         hub.broadcast("repo", updated)
         results.append({"path": p, "ok": ok, "error": err, "steps": steps, "repo": updated})
     done = sum(1 for x in results if x["ok"])
@@ -648,9 +654,11 @@ def repo_by_path(path):
 
 
 def refresh_one(path, with_sizes=True):
+    """Re-inspect one repo. Returns (repo, changed)."""
     fresh = inspect(path, with_sizes=with_sizes)
     with State.lock:
         repos = State.data["repos"]
+        before = next((dict(r) for r in repos if r["path"] == path), None)
         for i, r in enumerate(repos):
             if r["path"] == path:
                 if not with_sizes:   # keep the last known dependency sizes
@@ -659,8 +667,17 @@ def refresh_one(path, with_sizes=True):
         group_duplicates(repos)
         updated = next((r for r in repos if r["path"] == path), fresh)
         data = State.data
-    save_cache(data)
-    return updated
+    changed = before != updated
+    if changed:
+        save_cache(data)
+    return updated, changed
+
+
+def push_repo(path):
+    """Refresh a repo and tell the dashboard, but only when something it shows changed."""
+    repo, changed = refresh_one(path, with_sizes=False)
+    if changed:
+        hub.broadcast("repo", repo)
 
 
 def repo_for(path):
@@ -677,7 +694,7 @@ def on_changed(paths):
     """Called by Radar.app's file watcher: refresh just the repos and folders that changed."""
     repos, kinds = set(), set()
     for p in paths:
-        if "/node_modules/" in p or "/.git/objects/" in p:
+        if "/node_modules/" in p or "/.git/objects/" in p or (".git" in p and p.endswith(".lock")):
             continue
         if p.startswith(str(State.dl_dir)):
             kinds.add("downloads")
@@ -688,7 +705,7 @@ def on_changed(paths):
             repos.add(rp)
     for rp in repos:
         try:
-            hub.broadcast("repo", refresh_one(rp, with_sizes=False))
+            push_repo(rp)
         except subprocess.TimeoutExpired:
             pass
     for k in kinds:
@@ -720,7 +737,7 @@ def poll_git():
             sig = git_signature(p)
             if State.git_sigs.get(p) not in (None, sig):
                 try:
-                    hub.broadcast("repo", refresh_one(p, with_sizes=False))
+                    push_repo(p)
                 except (subprocess.TimeoutExpired, StopIteration):
                     pass
             State.git_sigs[p] = sig
@@ -918,7 +935,7 @@ class Handler(BaseHTTPRequestHandler):
                 "github": lambda: create_github(path, body.get("name") or os.path.basename(path)),
                 "trash_node_modules": lambda: trash_node_modules(path),
             }.get(action, lambda: {"ok": False, "error": "unknown action"})()
-        result["repo"] = refresh_one(path)
+        result["repo"], _ = refresh_one(path)
         self._send(200, result)
 
     def _sweep_action(self, body):
@@ -954,7 +971,7 @@ class Handler(BaseHTTPRequestHandler):
         else:
             return self._send(400, {"ok": False, "error": "Not available for this file."})
         if f.get("repo"):
-            hub.broadcast("repo", refresh_one(f["repo"], with_sizes=False))
+            push_repo(f["repo"])
         res["scan"] = get_leaks(refresh=True)
         self._send(200, res)
 

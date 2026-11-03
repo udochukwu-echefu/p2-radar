@@ -149,6 +149,7 @@ button.stat:hover { border-color: var(--line-2); transform: translateY(-2px); bo
 .steps i { height: 6px; border-radius: 99px; background: var(--card-3); position: relative; overflow: hidden; }
 .steps i::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--c); transform-origin: left; transform: scaleX(0); transition: transform 420ms var(--ease); }
 .steps i.on::after { transform: scaleX(1); animation: grow 520ms var(--ease) both; animation-delay: calc(var(--k) * 90ms); }
+.quiet .steps i.on::after { animation: none; }
 .steps-k { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 6px; font-size: 11.5px; color: var(--text-3); }
 .steps-k span.on { color: var(--text-2); }
 
@@ -449,6 +450,7 @@ function shortPath(p, max = 42) {
 }
 function vtName(p) { let h = 5381; for (const c of p) h = (h * 33 + c.charCodeAt(0)) >>> 0; return "r" + h.toString(36); }
 function transition(fn) {
+  document.body.classList.remove("quiet");   // page changes may animate again
   if (REDUCED || !document.startViewTransition) return fn();
   const t = document.startViewTransition(fn);
   for (const p of [t.ready, t.finished, t.updateCallbackDone]) p?.catch(() => {});  // a newer transition may skip this one
@@ -1100,7 +1102,7 @@ function scheduleRender() {
     const a = document.activeElement;
     const typing = a && a.tagName === "INPUT" && a.id !== "q" && $("#app").contains(a);
     if (typing || S.bulk?.running || pal.open) return scheduleRender();   // don't yank the page from under the user
-    if (S.view === "projects") transition(render);
+    if (S.view === "projects") { document.body.classList.add("quiet"); render(); }   // live update: redraw in place, nothing replays
   }, 300);
 }
 
@@ -1141,6 +1143,7 @@ function connectEvents() {
     if (!S.proj) return;
     const r = JSON.parse(e.data);
     const i = S.proj.repos.findIndex(x => x.path === r.path);
+    if (i >= 0 && JSON.stringify(S.proj.repos[i]) === JSON.stringify(r)) return;   // nothing on screen would change
     i >= 0 ? (S.proj.repos[i] = r) : S.proj.repos.push(r);
     scheduleRender();
   });
