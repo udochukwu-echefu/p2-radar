@@ -1,4 +1,4 @@
-"""The few things Radar does differently on macOS, Windows and Linux:
+"""The few things P2 Radar does differently on macOS, Windows and Linux:
 where state lives, folder sizes, the trash/Recycle Bin and undo, showing a
 file in Finder/Explorer, opening a terminal, installed apps, notifications.
 Everything else in the engine is shared.

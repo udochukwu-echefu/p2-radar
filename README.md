@@ -1,33 +1,33 @@
-# Radar
+# P2 Radar
 
 A small app for macOS and Windows that keeps an eye on your work and your disk.
 
-[![CI](https://github.com/udochukwu-echefu/project-radar/actions/workflows/ci.yml/badge.svg)](https://github.com/udochukwu-echefu/project-radar/actions/workflows/ci.yml)
+[![CI](https://github.com/udochukwu-echefu/p2-radar/actions/workflows/ci.yml/badge.svg)](https://github.com/udochukwu-echefu/p2-radar/actions/workflows/ci.yml)
 
 - **Projects**: finds every git repo in your home folder and shows which ones have work that isn't backed up: no remote at all, uncommitted changes, or commits that were never pushed. Back them up in one click.
 - **Cleanup**: sorts Downloads, Desktop and storage (dependency folders, package and app caches, Xcode data) and pre-ticks only what's safe. Everything goes to the Trash, with undo.
 - **Secrets**: finds credential files tracked in git, about to be committed, or lying around in Desktop, Documents and Downloads.
 - **Convert**: one-click conversion between Word, RTF, text, Markdown, HTML, PDF and image formats.
 
-Everything runs locally. Radar's dashboard is served on `127.0.0.1` only, and nothing leaves your computer unless you press Push or Back up.
+Everything runs locally. P2 Radar's dashboard is served on `127.0.0.1` only, and nothing leaves your computer unless you press Push or Back up.
 
 ## Download
 
-Get the latest build for macOS (universal) or Windows from [Releases](https://github.com/udochukwu-echefu/project-radar/releases/latest), or from the [website](https://udochukwu-echefu.github.io/project-radar/). Both need Python 3.
+Get the latest build for macOS (universal) or Windows from [Releases](https://github.com/udochukwu-echefu/p2-radar/releases/latest), or from the [website](https://udochukwu-echefu.github.io/p2-radar/). Both need Python 3.
 
 The apps aren't notarized or code-signed by a paid developer account, so the first launch shows a warning: on macOS, open System Settings › Privacy & Security and click **Open Anyway**; on Windows, click **More info › Run anyway** in SmartScreen.
 
-If Radar is useful to you, a ⭐ on GitHub helps other people find it.
+If P2 Radar is useful to you, a ⭐ on GitHub helps other people find it.
 
 ## Build on macOS
 
 Requirements: macOS 14 or later, Python 3.8+ (from [python.org](https://www.python.org/downloads/macos/) or Homebrew), and the Xcode command line tools (`xcode-select --install`) to build the app. The [GitHub CLI](https://cli.github.com) (`gh`) is optional and enables "Back up to GitHub".
 
 ```bash
-git clone https://github.com/udochukwu-echefu/project-radar.git
-cd project-radar
+git clone https://github.com/udochukwu-echefu/p2-radar.git
+cd p2-radar
 ./mac-app/build.sh
-open ~/Applications/Radar.app
+open ~/Applications/"P2 Radar.app"
 ```
 
 On first launch macOS asks for access to Desktop, Documents and Downloads, and for permission to send notifications. Allow them.
@@ -43,12 +43,12 @@ Optional weekly check (Mondays at 10:00, posts a notification when work isn't ba
 Requirements: Windows 10 or 11, Python 3.8+ from [python.org](https://www.python.org/downloads/windows/) (tick "Add to PATH"), the [.NET 8 SDK](https://dotnet.microsoft.com/download) to build, and Git. Microsoft Word or LibreOffice enables document and PDF conversion; images convert without them.
 
 ```powershell
-git clone https://github.com/udochukwu-echefu/project-radar.git
-cd project-radar
+git clone https://github.com/udochukwu-echefu/p2-radar.git
+cd p2-radar
 .\win-app\build.ps1 -Weekly
 ```
 
-That installs Radar to `%LOCALAPPDATA%\Programs\Radar`, adds it to the Start menu, and schedules the weekly check. A build of every commit is also attached to the [CI runs](https://github.com/udochukwu-echefu/project-radar/actions/workflows/ci.yml) as `Radar-windows-x64`.
+That installs P2 Radar to `%LOCALAPPDATA%\Programs\Radar`, adds it to the Start menu, and schedules the weekly check. A build of every commit is also attached to the [CI runs](https://github.com/udochukwu-echefu/p2-radar/actions/workflows/ci.yml) as `P2-Radar-windows-x64`.
 
 What differs from the Mac version: files go to the **Recycle Bin** (Undo restores them), **Explorer** replaces Finder, the app lives in the **system tray**, and the Mac-only pieces (Xcode data, `/Applications`) are replaced by Windows equivalents (npm/pip/NuGet/VS Code caches, installed programs from the registry). The engine's tests run on Windows in CI on every push.
 

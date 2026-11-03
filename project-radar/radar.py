@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Project Radar: find every git repo on this Mac and show which ones have
+"""P2 Radar: find every git repo on this Mac and show which ones have
 work that isn't safe yet (uncommitted, unpushed, or no remote at all), and
 sweep ~/Downloads of installers, duplicates and other leftovers.
 
@@ -382,7 +382,7 @@ def wip_commit(repo):
     # Anything already staged that we decided to hold back gets unstaged.
     for f in prev["exclude"]:
         git(repo, "reset", "-q", "--", f["path"])
-    msg = f"WIP snapshot from Project Radar ({datetime.now():%Y-%m-%d %H:%M})"
+    msg = f"WIP snapshot from P2 Radar ({datetime.now():%Y-%m-%d %H:%M})"
     code, out, err = git(repo, "commit", "-m", msg, timeout=120)
     if code != 0:
         return {"ok": False, "error": (err or out).strip()}
@@ -1004,7 +1004,7 @@ def serve(port, open_browser):
     State.port = port = httpd.server_address[1]  # --port 0 picks a free one
     print(f"RADAR_PORT={port}", flush=True)  # Radar.app waits for this line
     url = f"http://127.0.0.1:{port}/"
-    print(f"Project Radar running at {url}  (Ctrl+C to stop)")
+    print(f"P2 Radar running at {url}  (Ctrl+C to stop)")
     cached = load_cache()
     if cached:   # open instantly with the last scan, then refresh behind it
         State.data = cached
@@ -1063,7 +1063,7 @@ def ago(ts):
 def summary(data):
     repos = data["repos"]
     risky = [r for r in repos if r["at_risk"]]
-    print(f"\nProject Radar: {len(repos)} repos scanned in {data['seconds']}s, {len(risky)} at risk\n")
+    print(f"\nP2 Radar: {len(repos)} repos scanned in {data['seconds']}s, {len(risky)} at risk\n")
     if data["blocked"]:
         print(f"  ! macOS blocked these folders, so repos inside them are missing: {', '.join(data['blocked'])}")
         print("    Fix: System Settings > Privacy & Security > Files & Folders (or Full Disk Access) > allow your terminal.\n")
@@ -1124,11 +1124,11 @@ def main():
             msg = "Every active repo is committed and pushed."
         if data["blocked"]:
             msg += f". Couldn't read {', '.join(data['blocked'])}, so the count may be low"
-        msg += ". Open Radar to review." if os.environ.get("RADAR_APP") else ". Run: radar.py serve"
+        msg += ". Open P2 Radar to review." if os.environ.get("RADAR_APP") else ". Run: radar.py serve"
         if os.environ.get("RADAR_NOTIFY_JSON"):   # Radar.app posts a native notification itself
-            print("RADAR_NOTIFY=" + json.dumps({"title": "Radar", "body": msg, "count": len(risky), "localOnly": local}), flush=True)
+            print("RADAR_NOTIFY=" + json.dumps({"title": "P2 Radar", "body": msg, "count": len(risky), "localOnly": local}), flush=True)
         else:
-            osutil.notify("Radar", msg)
+            osutil.notify("P2 Radar", msg)
         print(time.strftime("%Y-%m-%d %H:%M"), msg)
     else:
         summary(data)

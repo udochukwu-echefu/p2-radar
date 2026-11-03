@@ -1,4 +1,4 @@
-"""Secrets check for Radar: credential files that git tracks, that git would
+"""Secrets check for P2 Radar: credential files that git tracks, that git would
 pick up on the next `git add .`, or that sit loose in Desktop, Documents and
 Downloads. Fixes are local and reversible: untrack + .gitignore, or Trash.
 """
@@ -94,5 +94,5 @@ def ignore(f, quiet=False):
         with gi.open("a") as fh:
             if existing and existing[-1].strip():
                 fh.write("\n")
-            fh.write(f"# added by Radar: looks like a secret\n{line}\n")
+            fh.write(f"# added by P2 Radar: looks like a secret\n{line}\n")
     return {"ok": True, "message": f"Added {f['rel']} to .gitignore."} if not quiet else {"ok": True}

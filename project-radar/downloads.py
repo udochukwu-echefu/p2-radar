@@ -1,4 +1,4 @@
-"""Downloads and Desktop sweep for Radar: sort a folder into things you can
+"""Downloads and Desktop sweep for P2 Radar: sort a folder into things you can
 safely bin (installers for apps you already have, duplicate copies,
 unfinished downloads, archives you've already unpacked, old screenshots) and
 things worth a look (big videos, files that look like secrets). Nothing moves

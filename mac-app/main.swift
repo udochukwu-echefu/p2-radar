@@ -1,4 +1,4 @@
-// Radar.app: a native window around the Radar engine (radar.py).
+// P2 Radar.app: a native window around the P2 Radar engine (radar.py).
 // The app starts the engine on a free local port, shows its dashboard in a
 // WKWebView, badges the Dock icon, lives in the menu bar, watches the disk
 // for changes so cards update live, and stops the engine on quit.
@@ -101,7 +101,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--convert"), CommandLine.argume
         } else if outExt == "pdf" {
             try documentToPDF(src, dst)
         } else {
-            throw ConvertError(message: "Radar can't turn .\(inExt) into .\(outExt)")
+            throw ConvertError(message: "P2 Radar can't turn .\(inExt) into .\(outExt)")
         }
         printJSON(["ok": true, "outputs": outputs])
         exit(0)
@@ -116,7 +116,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--convert"), CommandLine.argume
 
 if CommandLine.arguments.contains("--notify") {
     guard let python = findPython() else {
-        print("Radar: Python 3 not found")
+        print("P2 Radar: Python 3 not found")
         exit(1)
     }
     let p = Process()
@@ -146,7 +146,7 @@ if CommandLine.arguments.contains("--notify") {
     let body = info["body"] as? String ?? ""
     if allowed {
         let content = UNMutableNotificationContent()
-        content.title = info["title"] as? String ?? "Radar"
+        content.title = info["title"] as? String ?? "P2 Radar"
         content.body = body
         content.sound = .default
         center.add(UNNotificationRequest(identifier: "weekly-\(Date().timeIntervalSince1970)", content: content, trigger: nil)) { _ in sem.signal() }
@@ -155,7 +155,7 @@ if CommandLine.arguments.contains("--notify") {
         // Notifications not allowed for Radar yet: fall back to a plain banner.
         let o = Process()
         o.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-        o.arguments = ["-e", "on run argv", "-e", "display notification (item 1 of argv) with title \"Radar\"", "-e", "end run", body]
+        o.arguments = ["-e", "on run argv", "-e", "display notification (item 1 of argv) with title \"P2 Radar\"", "-e", "end run", body]
         try? o.run(); o.waitUntilExit()
     }
     exit(0)
@@ -194,7 +194,7 @@ func jsString(_ s: String) -> String {
     return d.flatMap { String(data: $0, encoding: .utf8) }.map { String($0.dropFirst().dropLast()) } ?? "\"\""
 }
 
-// Radar's logo as a menu bar template: the dot-matrix R with its blip, one
+// P2 Radar's logo as a menu bar template: the dot-matrix R with its blip, one
 // colour so the menu bar can tint it. Drawn y-down on an 18pt grid.
 func menuBarIcon() -> NSImage {
     let cells: [(CGFloat, CGFloat)] = [(3, 0.5), (5.5, 0.5), (8, 0.5), (10.5, 0.5), (3, 3), (13, 3), (3, 5.5), (13, 5.5),
@@ -208,7 +208,7 @@ func menuBarIcon() -> NSImage {
         return true
     }
     img.isTemplate = true
-    img.accessibilityDescription = "Radar"
+    img.accessibilityDescription = "P2 Radar"
     return img
 }
 
@@ -243,7 +243,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1320, height: 880),
                           styleMask: [.titled, .closable, .miniaturizable, .resizable],
                           backing: .buffered, defer: false)
-        window.title = "Radar"
+        window.title = "P2 Radar"
         window.titlebarAppearsTransparent = true
         window.backgroundColor = pageBackground
         window.minSize = NSSize(width: 720, height: 540)
@@ -253,7 +253,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         window.setFrameAutosaveName("RadarMain")
         window.makeKeyAndOrderFront(nil)
 
-        web.loadHTMLString(statusPage("Starting Radar…", "Scanning your projects and folders.", spinner: true), baseURL: nil)
+        web.loadHTMLString(statusPage("Starting P2 Radar…", "Scanning your projects and folders.", spinner: true), baseURL: nil)
         startEngine()
         startWatching()
 
@@ -268,7 +268,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
 
     func startEngine() {
         guard let python = findPython() else {
-            return showError("Radar needs Python 3", "Install it from <code>python.org</code>, then open Radar again.")
+            return showError("P2 Radar needs Python 3", "Install it from <code>python.org</code>, then open P2 Radar again.")
         }
         let p = Process()
         p.executableURL = URL(fileURLWithPath: python)
@@ -291,7 +291,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
             DispatchQueue.main.async {
                 guard let self, !self.quitting else { return }
                 let tail = htmlEscape(String(self.stderrBuffer.suffix(1200)))
-                self.showError("Radar stopped unexpectedly",
+                self.showError("P2 Radar stopped unexpectedly",
                                "Exit code \(proc.terminationStatus). Press ⌘⇧R to restart.<br><br><code style='white-space:pre-wrap;text-align:left;display:block'>\(tail)</code>")
             }
         }
@@ -299,7 +299,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
             try p.run()
             engine = p
         } catch {
-            showError("Couldn't start Radar", htmlEscape(error.localizedDescription))
+            showError("Couldn't start P2 Radar", htmlEscape(error.localizedDescription))
         }
     }
 
@@ -326,7 +326,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         port = nil
         stdoutBuffer = ""
         stderrBuffer = ""
-        web.loadHTMLString(statusPage("Restarting Radar…", "One moment.", spinner: true), baseURL: nil)
+        web.loadHTMLString(statusPage("Restarting P2 Radar…", "One moment.", spinner: true), baseURL: nil)
         startEngine()
     }
 
@@ -419,11 +419,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
             menu.addItem(mi)
         }
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Open Radar", action: #selector(showMain), keyEquivalent: "").target = self
+        menu.addItem(withTitle: "Open P2 Radar", action: #selector(showMain), keyEquivalent: "").target = self
         menu.addItem(withTitle: "Go to Project…", action: #selector(openPalette), keyEquivalent: "").target = self
         menu.addItem(withTitle: "Rescan", action: #selector(rescan), keyEquivalent: "").target = self
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Quit Radar", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
+        menu.addItem(withTitle: "Quit P2 Radar", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
         refreshSummary()
     }
 
@@ -518,10 +518,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
 
         let appItem = NSMenuItem()
         let appMenu = NSMenu()
-        appMenu.addItem(withTitle: "About Radar", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        appMenu.addItem(withTitle: "About P2 Radar", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: "Hide Radar", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
-        appMenu.addItem(withTitle: "Quit Radar", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appMenu.addItem(withTitle: "Hide P2 Radar", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
+        appMenu.addItem(withTitle: "Quit P2 Radar", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appItem.submenu = appMenu
         main.addItem(appItem)
 
@@ -549,7 +549,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
 
         let windowItem = NSMenuItem()
         let win = NSMenu(title: "Window")
-        win.addItem(withTitle: "Radar", action: #selector(showMain), keyEquivalent: "0")
+        win.addItem(withTitle: "P2 Radar", action: #selector(showMain), keyEquivalent: "0")
         win.addItem(withTitle: "Minimize", action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
         win.addItem(withTitle: "Close", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
         windowItem.submenu = win

@@ -6,11 +6,11 @@
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <AssemblyName>Radar</AssemblyName>
+    <AssemblyName>P2 Radar</AssemblyName>
     <RootNamespace>Radar</RootNamespace>
     <ApplicationIcon>app.ico</ApplicationIcon>
     <Version>1.0.0</Version>
-    <Product>Radar</Product>
+    <Product>P2 Radar</Product>
     <Description>Finds work that isn't backed up, cleans up Downloads and caches, spots leaked secrets, converts documents.</Description>
     <!-- lets the project restore and compile on macOS/Linux too; it only runs on Windows -->
     <EnableWindowsTargeting>true</EnableWindowsTargeting>

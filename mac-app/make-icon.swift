@@ -1,4 +1,4 @@
-// Draws Radar's 1024x1024 app icon: a dark squircle holding the letter R in a
+// Draws P2 Radar's 1024x1024 app icon: a dark squircle holding the letter R in a
 // dot matrix, lit blue where a radar sweep passes over it, with one red blip. Usage: swift make-icon.swift out.png
 
 import AppKit

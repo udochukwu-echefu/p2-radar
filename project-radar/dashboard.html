@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Radar</title>
+<title>P2 Radar</title>
 <script>try { document.documentElement.dataset.theme = localStorage.getItem("radar.theme") || "dark"; } catch {}</script>
 <style>
 /* Clean, modern cards: soft surfaces, generous spacing, tinted status pills, one blue accent. */
@@ -362,7 +362,7 @@ button.stat:hover { border-color: var(--line-2); transform: translateY(-2px); bo
   <div class="brand">
     <!-- same artwork as the app icon (mac-app/make-icon.swift) -->
     <svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="rb" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2b2b2b"/><stop offset="1" stop-color="#0c0c0c"/></linearGradient></defs><rect width="64" height="64" rx="15" fill="url(#rb)"/><rect x=".5" y=".5" width="63" height="63" rx="14.5" fill="none" stroke="#fff" stroke-opacity=".14"/><path d="M32 32 L54.96 44.2 A26 26 0 0 0 48 11.5 Z" fill="#6b92ff" fill-opacity=".16"/><rect x="22.5" y="15.5" width="5" height="5" rx="1.5" fill="#fff" fill-opacity=".1"/><rect x="29.5" y="15.5" width="5" height="5" rx="1.5" fill="#fff" fill-opacity=".1"/><rect x="36.5" y="15.5" width="5" height="5" rx="1.5" fill="#fff" fill-opacity=".1"/><rect x="22.5" y="22.5" width="5" height="5" rx="1.5" fill="#fff" fill-opacity=".1"/><rect x="29.5" y="22.5" width="5" height="5" rx="1.5" fill="#fff" fill-opacity=".1"/><rect x="22.5" y="36.5" width="5" height="5" rx="1.5" fill="#fff" fill-opacity=".1"/><rect x="36.5" y="36.5" width="5" height="5" rx="1.5" fill="#fff" fill-opacity=".1"/><rect x="22.5" y="43.5" width="5" height="5" rx="1.5" fill="#fff" fill-opacity=".1"/><rect x="29.5" y="43.5" width="5" height="5" rx="1.5" fill="#fff" fill-opacity=".1"/><rect x="43.5" y="43.5" width="5" height="5" rx="1.5" fill="#fff" fill-opacity=".1"/><rect x="22.5" y="50.5" width="5" height="5" rx="1.5" fill="#fff" fill-opacity=".1"/><rect x="29.5" y="50.5" width="5" height="5" rx="1.5" fill="#fff" fill-opacity=".1"/><rect x="36.5" y="50.5" width="5" height="5" rx="1.5" fill="#fff" fill-opacity=".1"/><rect x="36.5" y="22.5" width="5" height="5" rx="1.5" fill="#6b92ff" fill-opacity=".4"/><rect x="43.5" y="29.5" width="5" height="5" rx="1.5" fill="#6b92ff" fill-opacity=".4"/><rect x="43.5" y="36.5" width="5" height="5" rx="1.5" fill="#6b92ff" fill-opacity=".4"/><rect x="15.5" y="8.5" width="5" height="5" rx="1.5" fill="#f2f2f2"/><rect x="22.5" y="8.5" width="5" height="5" rx="1.5" fill="#f2f2f2"/><rect x="29.5" y="8.5" width="5" height="5" rx="1.5" fill="#f2f2f2"/><rect x="36.5" y="8.5" width="5" height="5" rx="1.5" fill="#f2f2f2"/><rect x="15.5" y="15.5" width="5" height="5" rx="1.5" fill="#f2f2f2"/><rect x="15.5" y="22.5" width="5" height="5" rx="1.5" fill="#f2f2f2"/><rect x="15.5" y="29.5" width="5" height="5" rx="1.5" fill="#f2f2f2"/><rect x="22.5" y="29.5" width="5" height="5" rx="1.5" fill="#f2f2f2"/><rect x="29.5" y="29.5" width="5" height="5" rx="1.5" fill="#f2f2f2"/><rect x="15.5" y="36.5" width="5" height="5" rx="1.5" fill="#f2f2f2"/><rect x="29.5" y="36.5" width="5" height="5" rx="1.5" fill="#f2f2f2"/><rect x="15.5" y="43.5" width="5" height="5" rx="1.5" fill="#f2f2f2"/><rect x="36.5" y="43.5" width="5" height="5" rx="1.5" fill="#f2f2f2"/><rect x="15.5" y="50.5" width="5" height="5" rx="1.5" fill="#f2f2f2"/><rect x="43.5" y="50.5" width="5" height="5" rx="1.5" fill="#f2f2f2"/><rect x="43.5" y="15.5" width="5" height="5" rx="1.5" fill="#6b92ff"/><rect x="43.5" y="22.5" width="5" height="5" rx="1.5" fill="#6b92ff"/><rect x="36.5" y="29.5" width="5" height="5" rx="1.5" fill="#6b92ff"/><rect x="42.5" y="7.5" width="7" height="7" rx="2" fill="#ff5f57"/></svg>
-    <span class="name">Radar</span>
+    <span class="name">P2 Radar</span>
   </div>
   <div class="pills" role="tablist" aria-label="Section" id="views">
     <button role="tab" data-view="projects">Projects</button>
@@ -392,7 +392,7 @@ button.stat:hover { border-color: var(--line-2); transform: translateY(-2px); bo
 
 <script>
 const TOKEN = "__RADAR_TOKEN__";
-/* The native shell: WKWebView in Radar.app, WebView2 in Radar for Windows. */
+/* The native shell: WKWebView in Radar.app, WebView2 in P2 Radar for Windows. */
 const nativePost = msg => window.webkit?.messageHandlers?.radar ? window.webkit.messageHandlers.radar.postMessage(msg)
   : window.chrome?.webview ? window.chrome.webview.postMessage(msg) : null;
 if (window.webkit?.messageHandlers?.radar || window.chrome?.webview) {
@@ -564,7 +564,7 @@ function card(r) {
     r.remote && r.has_commits ? `<button data-act="push">${icon("up")}Push</button>` : "",
     !r.remote && r.has_commits && S.proj.gh ? `<button data-act="github">${icon("cloud")}Back up to GitHub</button>` : "",
     r.node_modules.length ? `<button data-act="trash_node_modules">${icon("trash")}Move node_modules to ${P.trash}</button>` : "", `<hr>`,
-    `<button data-act="${hidden ? "unhide" : "hide"}">${icon("eye")}${hidden ? "Show in Radar again" : "Hide from Radar"}</button>`,
+    `<button data-act="${hidden ? "unhide" : "hide"}">${icon("eye")}${hidden ? "Show in P2 Radar again" : "Hide from P2 Radar"}</button>`,
   ].join("");
   const kv = [
     ["Uncommitted", r.dirty ? plural(r.dirty, "change") : "None"],
@@ -739,7 +739,7 @@ function renderProjects() {
       ${stat("var(--blue)", "up", "Not pushed", n("unpushed"), n("unpushed") === 1 ? "project" : "projects", "Committed, not on a remote", null, "unpushed")}
       ${stat("var(--green)", "check", "Backed up", n("safe"), `/ ${act.length}`, "", act.length ? n("safe") / act.length : 0, "safe")}
     </div>
-    ${blocked.length ? `<div class="notice"><b>Some folders couldn't be read:</b> <code>${blocked.map(esc).join(", ")}</code>. ${P.os === "mac" ? "Allow Radar in System Settings › Privacy &amp; Security › Files &amp; Folders" : "Check that your account can open them"}, then press ${P.mod}R.</div>` : ""}
+    ${blocked.length ? `<div class="notice"><b>Some folders couldn't be read:</b> <code>${blocked.map(esc).join(", ")}</code>. ${P.os === "mac" ? "Allow P2 Radar in System Settings › Privacy &amp; Security › Files &amp; Folders" : "Check that your account can open them"}, then press ${P.mod}R.</div>` : ""}
     ${body}`;
   if (S.flash) {
     const el = document.querySelector(`.card[data-path="${CSS.escape(S.flash)}"]`);
@@ -933,7 +933,7 @@ async function undoSweep() {
 
 const LEAK_KINDS = [
   ["tracked", "Tracked in git", "These files are committed. If the repo is pushed, the secret is on the remote too. Stop tracking them, then rotate the key.", "var(--red)"],
-  ["unignored", "Not ignored", "Git would pick these up on the next “git add .”. Radar's snapshot holds them back, but other tools won't.", "var(--amber)"],
+  ["unignored", "Not ignored", "Git would pick these up on the next “git add .”. P2 Radar's snapshot holds them back, but other tools won't.", "var(--amber)"],
   ["loose", "Loose credential files", "Keys sitting in Desktop, Documents or Downloads.", "var(--blue)"],
 ];
 
@@ -1120,7 +1120,7 @@ async function rescan() {
     if (S.view === "convert") S.conv = null;
     await Promise.all(jobs);
     transition(render); toast("Up to date.");
-  } catch { toast(`Couldn't reach Radar's engine. Try ${P.mod}${P.os === "mac" ? "⇧" : "Shift+"}R.`, true); }
+  } catch { toast(`Couldn't reach P2 Radar's engine. Try ${P.mod}${P.os === "mac" ? "⇧" : "Shift+"}R.`, true); }
   b.classList.remove("spinning"); b.disabled = false;
 }
 window.rescan = rescan;  // ⌘R in Radar.app
@@ -1325,7 +1325,7 @@ document.addEventListener("keydown", e => {
 });
 
 render();
-loadProjects(false).then(() => transition(render)).catch(() => { $("#app").innerHTML = `<div class="empty"><b>Can't reach Radar's engine</b>Restart it from the app menu, or run python3 radar.py serve.</div>`; });
+loadProjects(false).then(() => transition(render)).catch(() => { $("#app").innerHTML = `<div class="empty"><b>Can't reach P2 Radar's engine</b>Restart it from the app menu, or run python3 radar.py serve.</div>`; });
 connectEvents();
 
 </script>

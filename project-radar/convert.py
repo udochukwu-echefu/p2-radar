@@ -200,7 +200,7 @@ def _run(cmd, timeout=180, env=None):
 def _native(src, dst):
     b = app_bin()
     if not b:
-        raise RuntimeError("PDF conversion needs Radar.app (run it from the app, not the browser).")
+        raise RuntimeError("PDF conversion needs the P2 Radar app (run it from the app, not the browser).")
     out = _run([b, "--convert", str(src), str(dst)])
     try:
         return [Path(p) for p in json.loads(out.strip().splitlines()[-1]).get("outputs", [])]

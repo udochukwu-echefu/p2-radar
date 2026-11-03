@@ -1,8 +1,8 @@
-// Radar for Windows: a native window around the Radar engine (radar.py),
+// P2 Radar for Windows: a native window around the P2 Radar engine (radar.py),
 // the counterpart of mac-app/main.swift.
 // The app starts the engine on a free local port, shows its dashboard in
 // WebView2, lives in the system tray, watches the user folder so cards update
-// live, and stops the engine on quit. `Radar.exe --notify` runs the weekly
+// live, and stops the engine on quit. `"P2 Radar.exe" --notify` runs the weekly
 // check and shows a notification.
 
 using System.Diagnostics;
@@ -48,7 +48,7 @@ static class Engine
 
     public static ProcessStartInfo Start(params string[] args)
     {
-        var (exe, pre) = FindPython() ?? throw new InvalidOperationException("Radar needs Python 3. Install it from python.org, then open Radar again.");
+        var (exe, pre) = FindPython() ?? throw new InvalidOperationException("P2 Radar needs Python 3. Install it from python.org, then open P2 Radar again.");
         var psi = new ProcessStartInfo(exe)
         {
             WorkingDirectory = Dir,
@@ -104,7 +104,7 @@ sealed class MainForm : Form
 
     public MainForm()
     {
-        Text = "Radar";
+        Text = "P2 Radar";
         Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
         BackColor = Color.FromArgb(10, 10, 10);
         MinimumSize = new Size(720, 540);
@@ -113,7 +113,7 @@ sealed class MainForm : Form
         Controls.Add(web);
 
         tray.Icon = Icon;
-        tray.Text = "Radar";
+        tray.Text = "P2 Radar";
         tray.Visible = true;
         tray.ContextMenuStrip = new ContextMenuStrip();
         tray.ContextMenuStrip.Opening += (_, _) => BuildTrayMenu();
@@ -144,7 +144,7 @@ sealed class MainForm : Form
             if (uri.Scheme is "http" or "https") Native.OpenExternal(a.Uri);   // a dropped file is ignored instead
         };
         core.NewWindowRequested += (_, a) => { a.Handled = true; Native.OpenExternal(a.Uri); };
-        core.NavigateToString(StatusPage("Starting Radar…", "Scanning your projects and folders.", true));
+        core.NavigateToString(StatusPage("Starting P2 Radar…", "Scanning your projects and folders.", true));
         StartEngine();
         StartWatching();
     }
@@ -167,7 +167,7 @@ sealed class MainForm : Form
             {
                 if (quitting) return;
                 string tail; lock (stderr) tail = stderr.ToString();
-                web.CoreWebView2?.NavigateToString(StatusPage("Radar stopped unexpectedly",
+                web.CoreWebView2?.NavigateToString(StatusPage("P2 Radar stopped unexpectedly",
                     "Use Restart Engine in the tray menu.<pre>" + System.Net.WebUtility.HtmlEncode(tail[Math.Max(0, tail.Length - 1200)..]) + "</pre>", false));
             });
             engine.Start();
@@ -176,7 +176,7 @@ sealed class MainForm : Form
         }
         catch (Exception ex)
         {
-            web.CoreWebView2?.NavigateToString(StatusPage("Couldn't start Radar", System.Net.WebUtility.HtmlEncode(ex.Message), false));
+            web.CoreWebView2?.NavigateToString(StatusPage("Couldn't start P2 Radar", System.Net.WebUtility.HtmlEncode(ex.Message), false));
         }
     }
 
@@ -194,7 +194,7 @@ sealed class MainForm : Form
         quitting = false;
         port = null;
         lock (stderr) stderr.Clear();
-        web.CoreWebView2?.NavigateToString(StatusPage("Restarting Radar…", "One moment.", true));
+        web.CoreWebView2?.NavigateToString(StatusPage("Restarting P2 Radar…", "One moment.", true));
         StartEngine();
     }
 
@@ -253,7 +253,7 @@ sealed class MainForm : Form
             var json = await http.GetStringAsync($"http://127.0.0.1:{port}/api/summary");
             summary = JsonDocument.Parse(json).RootElement.Clone();
             int n = summary.GetProperty("atRisk").GetInt32();
-            var text = n > 0 ? $"Radar · {n} need attention" : "Radar · everything is backed up";
+            var text = n > 0 ? $"P2 Radar · {n} need attention" : "P2 Radar · everything is backed up";
             tray.Text = text.Length > 63 ? text[..63] : text;
         }
         catch { }
@@ -284,12 +284,12 @@ sealed class MainForm : Form
             }
         }
         m.Items.Add(new ToolStripSeparator());
-        m.Items.Add("Open Radar", null, (_, _) => ShowMain());
+        m.Items.Add("Open P2 Radar", null, (_, _) => ShowMain());
         m.Items.Add("Go to Project…", null, (_, _) => { ShowMain(); _ = web.CoreWebView2?.ExecuteScriptAsync("window.openPalette && openPalette()"); });
         m.Items.Add("Rescan", null, (_, _) => _ = web.CoreWebView2?.ExecuteScriptAsync("typeof rescan === 'function' && rescan()"));
         m.Items.Add("Restart Engine", null, (_, _) => RestartEngine());
         m.Items.Add(new ToolStripSeparator());
-        m.Items.Add("Quit Radar", null, (_, _) => Quit());
+        m.Items.Add("Quit P2 Radar", null, (_, _) => Quit());
     }
 
     public void ShowMain()
@@ -317,7 +317,7 @@ sealed class MainForm : Form
             if (r.TryGetProperty("atRisk", out var n))
             {
                 int count = n.GetInt32();
-                var text = count > 0 ? $"Radar · {count} need attention" : "Radar · everything is backed up";
+                var text = count > 0 ? $"P2 Radar · {count} need attention" : "P2 Radar · everything is backed up";
                 tray.Text = text.Length > 63 ? text[..63] : text;
                 _ = RefreshSummary();
             }
@@ -341,7 +341,7 @@ sealed class MainForm : Form
             Hide();
             if (!toldAboutTray)
             {
-                tray.ShowBalloonTip(4000, "Radar is still running", "Find it in the system tray. Right-click it to quit.", ToolTipIcon.Info);
+                tray.ShowBalloonTip(4000, "P2 Radar is still running", "Find it in the system tray. Right-click it to quit.", ToolTipIcon.Info);
                 toldAboutTray = true;
             }
             return;
@@ -406,9 +406,9 @@ static class Program
             var body = doc.RootElement.GetProperty("body").GetString() ?? "";
 
             Application.EnableVisualStyles();
-            using var tray = new NotifyIcon { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath), Text = "Radar", Visible = true };
+            using var tray = new NotifyIcon { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath), Text = "P2 Radar", Visible = true };
             tray.BalloonTipClicked += (_, _) => Process.Start(new ProcessStartInfo(Application.ExecutablePath) { UseShellExecute = true });
-            tray.ShowBalloonTip(10_000, "Radar", body, ToolTipIcon.Info);
+            tray.ShowBalloonTip(10_000, "P2 Radar", body, ToolTipIcon.Info);
             var until = DateTime.Now.AddSeconds(12);
             while (DateTime.Now < until) { Application.DoEvents(); Thread.Sleep(100); }
             tray.Visible = false;

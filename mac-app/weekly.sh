@@ -1,17 +1,17 @@
 #!/bin/bash
-# Installs or removes the weekly Radar check (Mondays at 10:00), which posts a
+# Installs or removes the weekly P2 Radar check (Mondays at 10:00), which posts a
 # notification when projects have work that isn't backed up.
 #   ./weekly.sh install     ./weekly.sh uninstall     ./weekly.sh run (once, now)
 set -euo pipefail
 
 LABEL="com.udo.project-radar"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
-APP_BIN="$HOME/Applications/Radar.app/Contents/MacOS/Radar"
+APP_BIN="$HOME/Applications/P2 Radar.app/Contents/MacOS/Radar"
 LOG_DIR="$HOME/Library/Application Support/Project Radar"
 
 case "${1:-}" in
   install)
-    [[ -x "$APP_BIN" ]] || { echo "Build and install Radar.app first: ./build.sh"; exit 1; }
+    [[ -x "$APP_BIN" ]] || { echo "Build and install P2 Radar.app first: ./build.sh"; exit 1; }
     mkdir -p "$HOME/Library/LaunchAgents" "$LOG_DIR"
     cat > "$PLIST" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>

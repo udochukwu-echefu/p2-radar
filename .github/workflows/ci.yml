@@ -48,12 +48,12 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force dist | Out-Null
-          Rename-Item win-app/publish Radar
-          Compress-Archive -Path win-app/Radar -DestinationPath dist/Radar-windows-x64.zip
+          Rename-Item win-app/publish 'P2 Radar'
+          Compress-Archive -Path 'win-app/P2 Radar' -DestinationPath dist/P2-Radar-windows-x64.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: Radar-windows-x64
-          path: dist/Radar-windows-x64.zip
+          name: P2-Radar-windows-x64
+          path: dist/P2-Radar-windows-x64.zip
 
   mac-app:
     name: Mac app build
@@ -66,20 +66,20 @@ jobs:
           RADAR_VERSION: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '0.0.0' }}
         run: |
           RADAR_VERSION="${RADAR_VERSION#v}" ./mac-app/build.sh --no-install
-          lipo -archs mac-app/build/Radar.app/Contents/MacOS/Radar
+          lipo -archs "mac-app/build/P2 Radar.app/Contents/MacOS/Radar"
       - name: Native converter
         run: |
-          printf '<h1>Radar</h1><p>CI</p>' > /tmp/ci.html
-          ./mac-app/build/Radar.app/Contents/MacOS/Radar --convert /tmp/ci.html /tmp/ci.pdf
+          printf '<h1>P2 Radar</h1><p>CI</p>' > /tmp/ci.html
+          ./"mac-app/build/P2 Radar.app/Contents/MacOS/Radar" --convert /tmp/ci.html /tmp/ci.pdf
           test -s /tmp/ci.pdf
       - name: Package
         run: |
           mkdir -p dist
-          ditto -c -k --keepParent mac-app/build/Radar.app dist/Radar-mac.zip
+          ditto -c -k --keepParent "mac-app/build/P2 Radar.app" dist/P2-Radar-mac.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: Radar-mac
-          path: dist/Radar-mac.zip
+          name: P2-Radar-mac
+          path: dist/P2-Radar-mac.zip
 
   # Pushing a tag like v0.1.0 publishes both downloads as a GitHub release,
   # which the website links to through releases/latest/download/<file>.
@@ -98,4 +98,4 @@ jobs:
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" dist/Radar-mac.zip dist/Radar-windows-x64.zip --repo "$GITHUB_REPOSITORY" --title "Radar $GITHUB_REF_NAME" --generate-notes
+        run: gh release create "$GITHUB_REF_NAME" dist/P2-Radar-mac.zip dist/P2-Radar-windows-x64.zip --repo "$GITHUB_REPOSITORY" --title "P2 Radar $GITHUB_REF_NAME" --generate-notes

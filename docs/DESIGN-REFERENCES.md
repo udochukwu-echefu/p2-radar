@@ -2,7 +2,7 @@
 
 Every section of `docs/index.html` is adapted from a design found on Dribbble or Designeer (browsed November 2026). Pinterest was not used: it only shows boards to signed-in users.
 
-Layouts and component patterns were adapted; no artwork, photos, copy or code was taken from these designs. Radar's own icon, colours and product UI are used throughout.
+Layouts and component patterns were adapted; no artwork, photos, copy or code was taken from these designs. P2 Radar's own icon, colours and product UI are used throughout.
 
 | # | Reference | Where | What was adapted | Used in |
 |---|---|---|---|---|
@@ -12,6 +12,6 @@ Layouts and component patterns were adapted; no artwork, photos, copy or code wa
 | E | **tubecut.app, macOS App & Landing Page** by Oğuz Yağız Kara | [Dribbble](https://dribbble.com/shots/19243071-tubecut-app-macOS-App-Landing-Page) | Small centred app icon over a centred headline; the product name in a highlighted box with trim handles and faded words either side; tilted keycap chips floating around the hero; the Mac app window right below | Hero |
 | F | **React Hot Toast** by Timo Lins | [Dribbble](https://dribbble.com/shots/14794074-React-Hot-Toast) | Two-button tray where one button demonstrates the product live on the page and the other links to GitHub; "Documentation" line under it; three-column checklist of short features | Hero buttons ("Run a demo scan"), feature checklist; the download buttons and the split "Star on GitHub" button |
 
-The product window in the hero shows Radar's real dashboard design with sample data.
+The product window in the hero shows P2 Radar's real dashboard design with sample data.
 
 "How it works" first used spencer's studio work list (Designeer) as a light panel; it was replaced with the dark circuit layout from reference A so the page stays dark throughout.

@@ -1,8 +1,8 @@
 #!/bin/bash
-# Builds Radar.app from main.swift + the Python engine in ../project-radar,
+# Builds P2 Radar.app from main.swift + the Python engine in ../project-radar,
 # signs it ad hoc and installs it to ~/Applications.
 #   ./build.sh                build and install the app, and sync the engine
-#   ./build.sh --engine       only sync the engine + dashboard and relaunch Radar
+#   ./build.sh --engine       only sync the engine + dashboard and relaunch P2 Radar
 #                             (no re-sign, so macOS won't ask for folder access again)
 #   ./build.sh --no-install   build only (into ./build)
 # RADAR_ARCHS="arm64 x86_64" builds a universal app; RADAR_VERSION sets its version.
@@ -11,8 +11,9 @@ set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ENGINE="$HERE/../project-radar"
 BUILD="$HERE/build"
-APP="$BUILD/Radar.app"
-DEST="$HOME/Applications/Radar.app"
+APP="$BUILD/P2 Radar.app"
+DEST="$HOME/Applications/P2 Radar.app"
+OLD="$HOME/Applications/Radar.app"   # the app's name before it became P2 Radar
 SYNCED="$HOME/Library/Application Support/Project Radar/engine"
 
 sync_engine() {
@@ -24,10 +25,10 @@ sync_engine() {
 if [[ "${1:-}" == "--engine" ]]; then
   sync_engine
   if pgrep -xq Radar; then
-    osascript -e 'tell application "Radar" to quit' || true
+    osascript -e 'tell application id "com.udo.radar" to quit' || true
     sleep 1.5
     open "$DEST"
-    echo "Relaunched Radar"
+    echo "Relaunched P2 Radar"
   fi
   exit 0
 fi
@@ -64,8 +65,8 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 <plist version="1.0">
 <dict>
   <key>CFBundleIdentifier</key><string>com.udo.radar</string>
-  <key>CFBundleName</key><string>Radar</string>
-  <key>CFBundleDisplayName</key><string>Radar</string>
+  <key>CFBundleName</key><string>P2 Radar</string>
+  <key>CFBundleDisplayName</key><string>P2 Radar</string>
   <key>CFBundleExecutable</key><string>Radar</string>
   <key>CFBundleIconFile</key><string>Radar</string>
   <key>CFBundlePackageType</key><string>APPL</string>
@@ -75,9 +76,9 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
   <key>LSApplicationCategoryType</key><string>public.app-category.developer-tools</string>
   <key>NSHighResolutionCapable</key><true/>
   <key>NSHumanReadableCopyright</key><string>Finds work that isn't backed up and clutter in Downloads.</string>
-  <key>NSDesktopFolderUsageDescription</key><string>Radar looks for git projects on your Desktop to check whether their work is backed up.</string>
-  <key>NSDocumentsFolderUsageDescription</key><string>Radar looks for git projects in Documents to check whether their work is backed up.</string>
-  <key>NSDownloadsFolderUsageDescription</key><string>Radar sorts your Downloads so you can choose what to move to the Trash.</string>
+  <key>NSDesktopFolderUsageDescription</key><string>P2 Radar looks for git projects on your Desktop to check whether their work is backed up.</string>
+  <key>NSDocumentsFolderUsageDescription</key><string>P2 Radar looks for git projects in Documents to check whether their work is backed up.</string>
+  <key>NSDownloadsFolderUsageDescription</key><string>P2 Radar sorts your Downloads so you can choose what to move to the Trash.</string>
   <key>NSAppTransportSecurity</key><dict><key>NSAllowsLocalNetworking</key><true/></dict>
 </dict>
 </plist>
@@ -102,9 +103,9 @@ if [[ "${1:-}" == "--no-install" ]]; then
 fi
 
 echo "→ install"
-if pgrep -xq Radar; then osascript -e 'tell application "Radar" to quit' || true; sleep 1; fi
+if pgrep -xq Radar; then osascript -e 'tell application id "com.udo.radar" to quit' || true; sleep 1; fi
 mkdir -p "$HOME/Applications"
-rm -rf "$DEST"
+rm -rf "$DEST" "$OLD"
 ditto "$APP" "$DEST"
 sync_engine
 echo "Installed $DEST"

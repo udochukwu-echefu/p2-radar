@@ -1,4 +1,4 @@
-"""Storage sweep for Radar: space that rebuilds itself (dependency folders,
+"""Storage sweep for P2 Radar: space that rebuilds itself (dependency folders,
 package caches, app caches, developer tool data) and home-folder clutter
 (tool folders that only hold a copied skill). Same item shape as
 downloads.scan, so the dashboard reviews and trashes it the same way, with
