@@ -213,8 +213,9 @@ static int run_daemon(void) {
     if (pm_root)
         CFRunLoopAddSource(CFRunLoopGetCurrent(), IONotificationPortGetRunLoopSource(port), kCFRunLoopDefaultMode);
 
-    // Safety net: macOS can flip the LED back on its own (e.g. when charging state changes).
-    CFRunLoopTimerRef timer = CFRunLoopTimerCreate(NULL, CFAbsoluteTimeGetCurrent() + 5, 5, 0, 0, timer_fired, NULL);
+    // Picks up a new mode from the config file within a second, and is the safety net
+    // for macOS flipping the LED back on its own (e.g. when charging state changes).
+    CFRunLoopTimerRef timer = CFRunLoopTimerCreate(NULL, CFAbsoluteTimeGetCurrent() + 1, 1, 0, 0, timer_fired, NULL);
     CFRunLoopAddTimer(CFRunLoopGetCurrent(), timer, kCFRunLoopDefaultMode);
 
     CFRunLoopRun();
@@ -226,7 +227,7 @@ static void usage(void) {
         "usage: magsafe-led status\n"
         "       sudo magsafe-led off | on | green | orange\n"
         "       sudo magsafe-led daemon off|green|orange   (keep re-applying)\n"
-        "       sudo magsafe-led daemon --config <file>    (mode read from file, re-read every 5s)\n");
+        "       sudo magsafe-led daemon --config <file>    (mode read from file, re-read every second)\n");
 }
 
 int main(int argc, char **argv) {

@@ -71,6 +71,9 @@ svg.i { width: 15px; height: 15px; flex: none; }
 /* ------------------------------------------------------------ toolbar */
 .toolbar { position: sticky; top: 0; z-index: 30; height: var(--tb); background: color-mix(in oklch, var(--bg) 85%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }
 .tb { height: 100%; padding: 0 var(--gutter); display: flex; align-items: center; gap: 14px; }
+/* the section tabs scroll sideways on narrow windows instead of running off the edge */
+#views { min-width: 0; max-width: 100%; overflow-x: auto; scrollbar-width: none; flex-shrink: 1; }
+#views::-webkit-scrollbar { display: none; }
 .brand { display: flex; align-items: center; gap: 9px; font-weight: 650; font-size: 14.5px; letter-spacing: -0.01em; }
 .brand .logo { width: 30px; height: 30px; display: block; flex: none; border-radius: 7px; box-shadow: 0 1px 2px oklch(0 0 0 / 0.35); }
 .in-app .brand .name { display: none; }
@@ -352,6 +355,28 @@ button.stat:hover { border-color: var(--line-2); transform: translateY(-2px); bo
 .commits li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .commits code { font: 11px var(--mono); color: var(--text-3); margin-right: 6px; }
 @keyframes pal-in { from { opacity: 0; transform: translateY(-8px) scale(.98); } }
+/* MagSafe tab */
+.mag { max-width: 640px; gap: 18px; padding: 20px; }
+.mag-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 16px; align-items: center; }
+.mag-row h3 { margin: 0; font-size: 15px; }
+.mag-row p { margin: 2px 0 0; font-size: 13px; color: var(--text-2); }
+/* the cable's light, drawn as a small connector with its LED */
+.mag-plug { position: relative; width: 54px; height: 22px; border-radius: 11px; background: var(--card-3); box-shadow: inset 0 0 0 1px var(--line-2); }
+.mag-plug i { position: absolute; left: 50%; top: 50%; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%;
+  background: var(--led, var(--line-2)); box-shadow: 0 0 0 0 transparent; transition: background 300ms var(--ease), box-shadow 300ms var(--ease); }
+.mag-plug.lit i { box-shadow: 0 0 10px 2px color-mix(in oklch, var(--led) 70%, transparent); }
+.mag-plug.auto i { background: linear-gradient(90deg, var(--amber) 50%, var(--green) 50%); }
+.switch { position: relative; width: 46px; height: 28px; flex: none; border: 0; border-radius: 99px; padding: 0; background: var(--card-3); box-shadow: inset 0 0 0 1px var(--line-2); transition: background 200ms var(--ease); }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--text); box-shadow: 0 1px 3px oklch(0 0 0 / 0.35); transition: transform 220ms var(--ease); }
+.switch[aria-checked="true"] { background: var(--accent); box-shadow: none; }
+.switch[aria-checked="true"]::after { transform: translateX(18px); background: oklch(0.99 0 0); }
+.switch:disabled { opacity: 0.5; }
+.mag-colors { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-top: 16px; border-top: 1px solid var(--line); }
+.mag-colors span { font-size: 13px; color: var(--text-2); }
+.mag-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 12.5px; color: var(--text-3); }
+.mag-setup { display: flex; align-items: center; justify-content: space-between; gap: 12px 16px; flex-wrap: wrap; padding-top: 16px; border-top: 1px solid var(--line); font-size: 13px; color: var(--text-2); }
+.mag-setup p { margin: 0; max-width: 46ch; }
+
 @media (max-width: 760px) {
   .bulk-row { grid-template-columns: 20px minmax(0, 1fr); } .bulk-row .field, .bulk-row .st { grid-column: 2; text-align: left; }
   .conv-row { grid-template-columns: minmax(0, 1fr); } .conv-row .fmt { justify-content: flex-start; } .conv-row .chip { display: none; }
@@ -372,6 +397,7 @@ button.stat:hover { border-color: var(--line-2); transform: translateY(-2px); bo
     <button role="tab" data-view="cleanup">Cleanup</button>
     <button role="tab" data-view="secrets">Secrets</button>
     <button role="tab" data-view="convert">Convert</button>
+    <button role="tab" data-view="magsafe" hidden>MagSafe</button>
   </div>
   <div class="grow"></div>
   <label class="search" id="search" title="Search projects (/)">
@@ -411,12 +437,12 @@ const store = {
   get(k, d) { try { return localStorage.getItem("radar." + k) ?? d; } catch { return d; } },
   set(k, v) { try { localStorage.setItem("radar." + k, v); } catch {} },
 };
-const VIEWS = ["projects", "cleanup", "secrets", "convert"];
+const VIEWS = ["projects", "cleanup", "secrets", "convert", "magsafe"];
 const S = {
   view: VIEWS.includes(store.get("view")) ? store.get("view") : "projects", sub: store.get("sub", "downloads"),
   filter: "active", q: "", proj: null, hidden: new Set(),
   sweeps: {}, picked: {}, expanded: new Set(), confirmSweep: false,
-  leaks: null, conv: null, convTo: store.get("convTo", "pdf"),
+  leaks: null, conv: null, mag: null, convTo: store.get("convTo", "pdf"),
   pending: null, busy: null, flash: null, bulk: null, copies: {}, live: false,
 };
 
@@ -481,7 +507,7 @@ const I = {
   disk: '<ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/>', film: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M17 9h4M3 15h4M17 15h4"/>',
   key: '<circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3"/>', check: '<path d="m5 12 5 5 9-10"/>',
   image: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/>', doc: '<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 13h6M9 17h6"/>',
-  shield: '<path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/>', convert: '<path d="M4 7h13l-3-3M20 17H7l3 3"/>', ghost: '<path d="M5 21V10a7 7 0 0 1 14 0v11l-3-2-2 2-2-2-2 2-2-2z"/>',
+  shield: '<path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/>', bolt: '<path d="M13 3 5 14h6l-1 7 8-11h-6z"/>', convert: '<path d="M4 7h13l-3-3M20 17H7l3 3"/>', ghost: '<path d="M5 21V10a7 7 0 0 1 14 0v11l-3-2-2 2-2-2-2 2-2-2z"/>',
   monitor: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>', download: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
 };
 const icon = n => `<svg class="i" viewBox="0 0 24 24" ${n === "dots" ? 'fill="currentColor"' : 'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"'} aria-hidden="true">${I[n]}</svg>`;
@@ -1032,6 +1058,79 @@ async function convertFiles(files) {
   if (S.view === "convert") renderConvert();
 }
 
+/* ============================================================ magsafe */
+
+const LIGHT = { off: ["Off", ""], green: ["Green", "var(--green)"], orange: ["Orange", "var(--amber)"], system: ["Automatic", ""] };
+const MAG_COLORS = [["system", "Automatic"], ["green", "Green"], ["orange", "Orange"]];
+
+async function loadMag() {
+  S.mag = await getJSON("/api/magsafe").catch(() => ({ supported: false }));
+  const tab = $('[data-view="magsafe"]');
+  tab.hidden = !S.mag.supported;
+  if (S.view === "magsafe") {
+    if (!S.mag.supported) { S.view = "projects"; store.set("view", S.view); }
+    render();
+  }
+}
+
+function renderMagSafe() {
+  const app = $("#app");
+  if (!S.mag) {
+    app.innerHTML = `<div class="page-h"><div><h1>MagSafe</h1><p>Reading the charging light…</p></div></div><div class="skel" style="height:120px;max-width:640px"></div>`;
+    return void loadMag();
+  }
+  const m = S.mag;
+  if (!m.supported) {
+    app.innerHTML = `<div class="page-h"><div><h1>MagSafe</h1></div></div><div class="empty"><b>Not supported on ${here()}</b>The charging light control needs a MacBook with MagSafe 3 and the P2 Radar app.</div>`;
+    return;
+  }
+  const now = LIGHT[m.now] ? m.now : "system";
+  const wanted = m.installed ? (m.wanted || "system") : null;
+  const on = wanted ? wanted !== "off" : now !== "off";
+  const settling = wanted && (wanted === "system" ? m.now !== "system" : m.now !== wanted);
+  const plug = now === "system" ? "auto" : now === "off" ? "" : "lit";
+  const line = settling ? "Changing…" : now === "off" ? "The light is off." : now === "system" ? "macOS picks the colour: orange while charging, green when full." : `The light stays ${now}.`;
+  app.innerHTML = `
+    <div class="page-h"><div><h1>MagSafe</h1><p>The charging light on your MagSafe cable. P2 Radar keeps your choice through unplugging, sleep and restarts.</p></div></div>
+    <section class="card mag">
+      <div class="mag-row">
+        <span class="mag-plug ${plug}" style="--led:${LIGHT[now][1] || "var(--line-2)"}" aria-hidden="true"><i></i></span>
+        <div><h3>Charging light</h3><p role="status">${line}</p></div>
+        ${m.installed ? `<button class="switch" role="switch" aria-checked="${on}" aria-label="Charging light" data-mag-toggle></button>` : ""}
+      </div>
+      ${m.installed && on ? `<div class="mag-colors"><span>Colour</span>
+        <div class="pills" role="group" aria-label="Light colour">${MAG_COLORS.map(([k, label]) => `<button data-mag="${k}" aria-pressed="${wanted === k}">${label}</button>`).join("")}</div></div>` : ""}
+      ${m.installed
+        ? `<div class="mag-foot"><span>Runs as a small background helper.</span><button class="btn ghost sm" data-mag-remove>Remove light control</button></div>`
+        : `<div class="mag-setup"><p>Changing the light needs a small helper that runs in the background as an administrator. Setting it up asks for your password once; switching it after that doesn't.</p>
+            <button class="btn primary" data-mag-setup>Set up</button></div>`}
+    </section>`;
+}
+
+let magPoll;
+async function setMag(mode) {
+  if (mode !== "off") store.set("magColor", mode);
+  const res = await post("/api/magsafe", { mode });
+  if (!res.ok) return toast(res.error || "Couldn't change the light.", true);
+  S.mag = res; render();
+  // the helper applies it within a second; follow the light until it shows the new state
+  clearInterval(magPoll);
+  let n = 0;
+  magPoll = setInterval(async () => {
+    S.mag = await getJSON("/api/magsafe");
+    const done = mode === "system" ? S.mag.now === "system" : S.mag.now === mode;
+    if (S.view === "magsafe") render();
+    if (done || ++n > 10) clearInterval(magPoll);
+  }, 500);
+}
+
+/* the app calls this when its password prompt for setup or removal is done ("" = done or cancelled) */
+window.magsafeDone = err => {
+  document.querySelectorAll("[data-mag-setup], [data-mag-remove]").forEach(b => b.classList.remove("loading"));
+  if (err) toast(err, true);
+  loadMag();
+};
+
 /* ============================================================ ⌘K project switcher */
 
 const pal = { open: false, q: "", i: 0, list: [] };
@@ -1091,7 +1190,7 @@ function render() {
   document.body.classList.toggle("view-other", S.view !== "projects");
   document.querySelectorAll("#views [data-view]").forEach(b => b.setAttribute("aria-selected", b.dataset.view === S.view));
   if (S.proj) nativePost({ atRisk: active().filter(r => laneOf(r).id !== "safe").length });
-  ({ projects: renderProjects, cleanup: renderCleanup, secrets: renderSecrets, convert: renderConvert })[S.view]();
+  ({ projects: renderProjects, cleanup: renderCleanup, secrets: renderSecrets, convert: renderConvert, magsafe: renderMagSafe })[S.view]();
   renderActionbar();
 }
 
@@ -1265,6 +1364,11 @@ document.addEventListener("click", e => {
   }
 
   // convert
+  if (t.closest("[data-mag-toggle]")) return setMag(t.closest("[data-mag-toggle]").getAttribute("aria-checked") === "true" ? "off" : store.get("magColor", "system"));
+  const mg = t.closest("[data-mag]");
+  if (mg) return setMag(mg.dataset.mag);
+  const ms = t.closest("[data-mag-setup], [data-mag-remove]");
+  if (ms) { ms.classList.add("loading"); return nativePost({ magsafe: ms.matches("[data-mag-setup]") ? "install" : "uninstall" }); }
   const ct2 = t.closest("[data-conv-to]");
   if (ct2) { S.convTo = ct2.dataset.convTo; store.set("convTo", S.convTo); return renderConvert(); }
   const cv = t.closest("[data-convert]");
@@ -1330,6 +1434,7 @@ document.addEventListener("keydown", e => {
 });
 
 render();
+loadMag();
 loadProjects(false).then(() => transition(render)).catch(() => { $("#app").innerHTML = `<div class="empty"><b>Can't reach P2 Radar's engine</b>Restart it from the app menu, or run python3 radar.py serve.</div>`; });
 connectEvents();
 

@@ -3,7 +3,8 @@
 // Reading it works as the user, through the helper bundled in the app.
 // Changing it needs root, and macOS resets it on replug, wake and charge
 // changes, so a one-time setup (one admin password prompt) installs a root
-// daemon that keeps re-applying the mode written in a file the user owns.
+// daemon that keeps re-applying the mode written in a file the user owns
+// (it re-reads the file every second).
 // After that, picking a mode only rewrites that file.
 
 import AppKit

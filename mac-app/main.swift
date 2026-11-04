@@ -468,7 +468,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
 
     @objc func chooseMagSafe(_ sender: NSMenuItem) {
         guard let raw = sender.representedObject as? String, let mode = MagSafe.Mode(rawValue: raw) else { return }
-        do { try MagSafe.setWanted(mode) }   // the daemon picks it up within 5 seconds
+        do { try MagSafe.setWanted(mode) }   // the daemon picks it up within a second
         catch { magSafeAlert("Couldn't change the MagSafe light", error.localizedDescription) }
     }
 
@@ -538,6 +538,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
             NSApp.dockTile.badgeLabel = n > 0 ? String(n) : nil
             statusItem.button?.title = n > 0 ? " \(n)" : ""
             refreshSummary()
+        }
+        if let action = body["magsafe"] as? String {
+            // The dashboard's MagSafe tab: setup and removal need macOS's password prompt.
+            DispatchQueue.main.async {
+                let err = action == "install" ? MagSafe.install() : MagSafe.uninstall()
+                self.web.evaluateJavaScript("window.magsafeDone && magsafeDone(\(jsString(err ?? "")))")
+            }
         }
         if let theme = body["theme"] as? String {
             // Keep the title bar in step with the page's light/dark toggle.

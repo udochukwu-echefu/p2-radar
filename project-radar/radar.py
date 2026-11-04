@@ -36,6 +36,7 @@ from urllib.parse import parse_qs, urlparse
 import convert
 import downloads
 import leaks
+import magsafe
 import osutil
 import storage
 
@@ -865,6 +866,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, {"group": group, "copies": copy_analysis(members)})
         if u.path == "/api/secrets":
             return self._send(200, get_leaks(refresh))
+        if u.path == "/api/magsafe":
+            return self._send(200, magsafe.state())
         if u.path == "/api/convert/recent":
             items = convert.recent()
             State.outputs |= {i["path"] for i in items}
@@ -898,6 +901,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/secrets/action": self._secret_action,
                 "/api/convert": self._convert,
                 "/api/reveal": self._reveal,
+                "/api/magsafe": lambda b: self._send(200, magsafe.set_wanted(b.get("mode"))),
             }.get(route.path)
             if not handler:
                 return self._send(404, {"error": "not found"})
