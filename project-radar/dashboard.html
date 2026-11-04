@@ -1087,9 +1087,13 @@ function renderMagSafe() {
   const now = LIGHT[m.now] ? m.now : "system";
   const wanted = m.installed ? (m.wanted || "system") : null;
   const on = wanted ? wanted !== "off" : now !== "off";
-  const settling = wanted && (wanted === "system" ? m.now !== "system" : m.now !== wanted);
+  // On Automatic, macOS sets green or orange itself, so there's nothing to wait for.
+  const settling = wanted && wanted !== "system" && m.now !== wanted;
   const plug = now === "system" ? "auto" : now === "off" ? "" : "lit";
-  const line = settling ? "Changing…" : now === "off" ? "The light is off." : now === "system" ? "macOS picks the colour: orange while charging, green when full." : `The light stays ${now}.`;
+  const auto = (wanted || "system") === "system";
+  const line = settling ? (S.magStuck ? "Not applied yet. The helper may have stopped: try Remove light control, then Set up again." : "Changing…")
+    : auto && now !== "off" ? `macOS picks the colour${now === "system" ? "" : `: ${now} now`}. Orange while charging, green when full.`
+    : now === "off" ? "The light is off." : `The light stays ${now}.`;
   app.innerHTML = `
     <div class="page-h"><div><h1>MagSafe</h1><p>The charging light on your MagSafe cable. P2 Radar keeps your choice through unplugging, sleep and restarts.</p></div></div>
     <section class="card mag">
@@ -1112,15 +1116,16 @@ async function setMag(mode) {
   if (mode !== "off") store.set("magColor", mode);
   const res = await post("/api/magsafe", { mode });
   if (!res.ok) return toast(res.error || "Couldn't change the light.", true);
-  S.mag = res; render();
+  S.mag = res; S.magStuck = false; render();
   // the helper applies it within a second; follow the light until it shows the new state
   clearInterval(magPoll);
   let n = 0;
   magPoll = setInterval(async () => {
     S.mag = await getJSON("/api/magsafe");
-    const done = mode === "system" ? S.mag.now === "system" : S.mag.now === mode;
+    const done = mode === "system" ? n >= 3 : S.mag.now === mode;   // on Automatic, show what macOS picks
+    if (!done && n >= 10) S.magStuck = true;
     if (S.view === "magsafe") render();
-    if (done || ++n > 10) clearInterval(magPoll);
+    if (done || n++ >= 10) clearInterval(magPoll);
   }, 500);
 }
 
