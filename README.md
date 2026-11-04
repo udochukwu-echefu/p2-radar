@@ -93,6 +93,9 @@ Drop files onto the window or pick a recent file. Documents to and from PDF use 
 **Windows:** a system tray icon with the same menu; it keeps running in the tray when the window is closed.
 Both: live updates as files change, a weekly notification, light and dark themes.
 
+### MagSafe light (macOS)
+On MacBooks with MagSafe 3, the menu bar's **MagSafe Light** submenu turns the charging light off, keeps it green or orange, or lets macOS decide. macOS resets the light on replug, wake and charge changes, so **Set Up Light Control…** installs a small root helper once (one password prompt): it copies `magsafe-led` to `/Library/PrivilegedHelperTools/com.udo.radar.magsafe-led` and adds a LaunchDaemon that re-applies the mode written in `~/Library/Application Support/Project Radar/magsafe-mode` every 5 seconds and after power or wake events. Picking a mode after that needs no password. **Remove Light Control…** stops the helper, gives the light back to macOS and deletes what setup added. Macs without the light's SMC key (`ACLC`) show "Not supported".
+
 ## How it works
 
 ```

@@ -48,16 +48,23 @@ iconutil -c icns "$ICONSET" -o "$BUILD/Radar.icns"
 
 echo "→ compile"
 slices=()
+archflags=()
 for arch in ${RADAR_ARCHS:-$(uname -m)}; do
-  swiftc -O -target "$arch-apple-macos14.0" "$HERE/main.swift" -o "$BUILD/Radar-$arch"
+  swiftc -O -target "$arch-apple-macos14.0" "$HERE/main.swift" "$HERE/MagSafe.swift" -o "$BUILD/Radar-$arch"
   slices+=("$BUILD/Radar-$arch")
+  archflags+=(-arch "$arch")
 done
 lipo -create "${slices[@]}" -output "$BUILD/Radar"
+# The MagSafe light helper: reads the light as the user; the root daemon copy runs from
+# /Library/PrivilegedHelperTools once the user sets it up from the menu bar.
+clang -O2 -Wall -Wextra "${archflags[@]}" -mmacosx-version-min=14.0 -framework IOKit -framework CoreFoundation \
+  -o "$BUILD/magsafe-led" "$HERE/magsafe-led.c"
 
 echo "→ bundle"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/radar"
 cp "$BUILD/Radar" "$APP/Contents/MacOS/Radar"
 cp "$BUILD/Radar.icns" "$APP/Contents/Resources/Radar.icns"
+cp "$BUILD/magsafe-led" "$APP/Contents/Resources/magsafe-led"
 cp "$ENGINE"/*.py "$ENGINE/dashboard.html" "$APP/Contents/Resources/radar/"
 cat > "$APP/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>

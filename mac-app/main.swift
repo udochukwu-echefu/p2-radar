@@ -423,8 +423,68 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         menu.addItem(withTitle: "Go to Project…", action: #selector(openPalette), keyEquivalent: "").target = self
         menu.addItem(withTitle: "Rescan", action: #selector(rescan), keyEquivalent: "").target = self
         menu.addItem(.separator())
+        menu.addItem(magSafeMenuItem())
+        menu.addItem(.separator())
         menu.addItem(withTitle: "Quit P2 Radar", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
         refreshSummary()
+    }
+
+    // MagSafe Light submenu: the light's state, the modes once the helper is set up,
+    // and the one-time setup (or removal) that needs the admin password.
+    func magSafeMenuItem() -> NSMenuItem {
+        let item = NSMenuItem(title: "MagSafe Light", action: nil, keyEquivalent: "")
+        item.image = NSImage(systemSymbolName: "bolt.horizontal.circle", accessibilityDescription: nil)
+        let sub = NSMenu()
+        item.submenu = sub
+        func note(_ text: String) {
+            let mi = NSMenuItem(title: text, action: nil, keyEquivalent: "")
+            mi.isEnabled = false
+            sub.addItem(mi)
+        }
+        guard let now = MagSafe.status() else {
+            note("Not supported on this Mac")
+            return item
+        }
+        let names = ["off": "off", "green": "green", "orange": "orange", "system": "set by macOS"]
+        note("The light is \(names[now] ?? "in another state") now")
+        sub.addItem(.separator())
+        if MagSafe.installed {
+            let wanted = MagSafe.wanted ?? .system
+            for mode in MagSafe.Mode.allCases {
+                let mi = NSMenuItem(title: mode.title, action: #selector(chooseMagSafe(_:)), keyEquivalent: "")
+                mi.representedObject = mode.rawValue
+                mi.state = mode == wanted ? .on : .off
+                mi.target = self
+                sub.addItem(mi)
+            }
+            sub.addItem(.separator())
+            sub.addItem(withTitle: "Remove Light Control…", action: #selector(removeMagSafe), keyEquivalent: "").target = self
+        } else {
+            sub.addItem(withTitle: "Set Up Light Control…", action: #selector(setUpMagSafe), keyEquivalent: "").target = self
+            note("Asks for your password once")
+        }
+        return item
+    }
+
+    @objc func chooseMagSafe(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String, let mode = MagSafe.Mode(rawValue: raw) else { return }
+        do { try MagSafe.setWanted(mode) }   // the daemon picks it up within 5 seconds
+        catch { magSafeAlert("Couldn't change the MagSafe light", error.localizedDescription) }
+    }
+
+    @objc func setUpMagSafe() {
+        if let err = MagSafe.install(), !err.isEmpty { magSafeAlert("Couldn't set up the MagSafe light", err) }
+    }
+
+    @objc func removeMagSafe() {
+        if let err = MagSafe.uninstall(), !err.isEmpty { magSafeAlert("Couldn't remove the MagSafe light control", err) }
+    }
+
+    func magSafeAlert(_ title: String, _ text: String) {
+        let a = NSAlert()
+        a.messageText = title
+        a.informativeText = text
+        a.runModal()
     }
 
     @objc func showMain() {
