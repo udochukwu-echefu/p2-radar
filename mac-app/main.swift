@@ -194,17 +194,18 @@ func jsString(_ s: String) -> String {
     return d.flatMap { String(data: $0, encoding: .utf8) }.map { String($0.dropFirst().dropLast()) } ?? "\"\""
 }
 
-// P2 Radar's logo as a menu bar template: the dot-matrix R with its blip, one
-// colour so the menu bar can tint it. Drawn y-down on an 18pt grid.
+// P2 Radar's logo as a menu bar template: a rounded tile with "P2" cut out of it,
+// one colour so the menu bar can tint it.
 func menuBarIcon() -> NSImage {
-    let cells: [(CGFloat, CGFloat)] = [(3, 0.5), (5.5, 0.5), (8, 0.5), (10.5, 0.5), (3, 3), (13, 3), (3, 5.5), (13, 5.5),
-        (3, 8), (5.5, 8), (8, 8), (10.5, 8), (3, 10.5), (8, 10.5), (3, 13), (10.5, 13), (3, 15.5), (13, 15.5)]
-    let img = NSImage(size: NSSize(width: 18, height: 18), flipped: true) { _ in
+    let word = NSAttributedString(string: "P2", attributes: [.font: NSFont.systemFont(ofSize: 11, weight: .heavy),
+                                                              .foregroundColor: NSColor.black, .kern: -0.3])
+    let size = word.size()
+    let tile = NSRect(x: 0.5, y: 1.5, width: ceil(size.width) + 6, height: 15)
+    let img = NSImage(size: NSSize(width: tile.maxX + 0.5, height: 18), flipped: false) { _ in
         NSColor.black.setFill()
-        for (x, y) in cells {
-            NSBezierPath(roundedRect: NSRect(x: x, y: y, width: 2, height: 2), xRadius: 0.6, yRadius: 0.6).fill()
-        }
-        NSBezierPath(ovalIn: NSRect(x: 12.7, y: 0.2, width: 2.6, height: 2.6)).fill()
+        NSBezierPath(roundedRect: tile, xRadius: 4, yRadius: 4).fill()
+        NSGraphicsContext.current?.compositingOperation = .destinationOut
+        word.draw(at: NSPoint(x: tile.midX - size.width / 2, y: tile.midY - size.height / 2))
         return true
     }
     img.isTemplate = true
