@@ -45,6 +45,8 @@ foreach ($p in 'include', 'Scripts', 'tcl', 'Lib\test', 'Lib\idlelib', 'Lib\tkin
 }
 Get-ChildItem (Join-Path $py 'Lib\site-packages') -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force
 Get-ChildItem (Join-Path $py 'DLLs') -Filter '*t*' -ErrorAction SilentlyContinue | Where-Object { $_.Name -match '^(_tkinter|tcl|tk|_test)' } | Remove-Item -Force
+& (Join-Path $py 'python.exe') -m compileall -q --invalidation-mode unchecked-hash (Join-Path $py 'Lib')
+if ($LASTEXITCODE -ne 0) { throw 'Could not compile the Python standard library' }
 
 if ($NoInstall) { Write-Host "Built $out"; return }
 

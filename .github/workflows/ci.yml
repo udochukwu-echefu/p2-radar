@@ -71,7 +71,8 @@ jobs:
           py="mac-app/build/P2 Radar.app/Contents/Resources/python/bin/python3"
           lipo -archs "$(dirname "$py")/python3.13"
           "$py" --version
-          "$py" "mac-app/build/P2 Radar.app/Contents/Resources/radar/radar.py" --root tests
+          PYTHONDONTWRITEBYTECODE=1 "$py" "mac-app/build/P2 Radar.app/Contents/Resources/radar/radar.py" --root tests
+          codesign --verify --deep --strict "mac-app/build/P2 Radar.app"
       - name: Native converter
         run: |
           printf '<h1>P2 Radar</h1><p>CI</p>' > /tmp/ci.html

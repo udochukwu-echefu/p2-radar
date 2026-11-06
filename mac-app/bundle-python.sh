@@ -55,6 +55,10 @@ for arch in "$@"; do
   fi
 done
 
+# The app never writes bytecode (that would break its signature), so compile the
+# standard library now; otherwise Python recompiles it on every launch.
+"$first/bin/python3" -m compileall -q --invalidation-mode unchecked-hash "$first/lib/python${VERSION%.*}"
+
 rm -rf "$DEST"
 mkdir -p "$(dirname "$DEST")"
 cp -R "$first" "$DEST"
