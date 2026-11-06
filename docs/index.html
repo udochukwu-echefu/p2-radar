@@ -432,7 +432,7 @@ footer a { color: var(--text-2); text-decoration: underline; text-underline-offs
 <section class="inside" id="inside">
   <div class="wrap">
     <div class="section-label reveal">How it works</div>
-    <h2 class="reveal">Three small parts. <span>All on your computer.</span></h2>
+    <h2 class="reveal">It's a Python script with a window. <span>Here's a normal run.</span></h2>
     <div class="stage reveal">
       <div class="term cmd">
         <img class="sticker" src="assets/icon.png" alt="">
@@ -440,33 +440,33 @@ footer a { color: var(--text-2); text-decoration: underline; text-underline-offs
 <em>P2 Radar: 4 repos scanned in 0.4s, 3 at risk</em></pre>
       </div>
       <div class="term">
-        <div class="term-h"><i></i><b>p2-radar</b> running locally</div>
+        <div class="term-h"><i></i><b>p2-radar</b></div>
         <dl class="log">
-          <div style="--i:0;--c:var(--text)"><dt>app</dt><dd>Opens the window and watches your folders for changes</dd></div>
-          <div style="--i:1;--c:var(--green)"><dt>server</dt><dd>Answers on 127.0.0.1 only, with a new token every launch</dd></div>
-          <div style="--i:2;--c:var(--blue)"><dt>engine</dt><dd>Runs git, sorts folders, checks for secrets</dd></div>
-          <div style="--i:3;--c:var(--amber)"><dt>cleanup</dt><dd>Moves files to the <span data-w="bin">Trash or Recycle Bin</span>, never deletes, and keeps undo</dd></div>
-          <div style="--i:4;--c:var(--red)"><dt>network</dt><dd>Nothing leaves unless you press Push or Back up<i class="cursor"></i></dd></div>
+          <div style="--i:0;--c:var(--text)"><dt>app</dt><dd>started, watching your home folder</dd></div>
+          <div style="--i:1;--c:var(--green)"><dt>server</dt><dd>listening on 127.0.0.1:8765</dd></div>
+          <div style="--i:2;--c:var(--blue)"><dt>engine</dt><dd>checked 4 repos in 0.4s</dd></div>
+          <div style="--i:3;--c:var(--amber)"><dt>cleanup</dt><dd>moved 3 files to the <span data-w="bin">Trash or Recycle Bin</span>, undo saved</dd></div>
+          <div style="--i:4;--c:var(--red)"><dt>network</dt><dd>0 requests sent<i class="cursor"></i></dd></div>
         </dl>
       </div>
     </div>
     <div class="parts">
       <article class="part reveal" style="--bg:oklch(0.96 0 0)">
         <h3>The app</h3>
-        <p>A native window with a menu bar or tray, notifications and file watching.</p>
+        <p>The window, the menu bar or tray icon, and the notifications.</p>
         <div class="spec"><span class="tag">SWIFT · C#</span>
           <div class="menu" aria-hidden="true"><span>Open P2 Radar</span><span>Go to Project…</span><span>Rescan</span></div></div>
       </article>
       <article class="part reveal" style="--bg:var(--amber)">
         <h3>Local server</h3>
-        <p>The dashboard talks to the engine on your computer and nowhere else.</p>
-        <div class="spec"><span class="tag">BOUND TO</span><span class="addr">127.0.0.1</span></div>
+        <p>Lets the window talk to the script. Other computers can't reach it.</p>
+        <div class="spec"><span class="tag">ADDRESS</span><span class="addr">127.0.0.1</span></div>
       </article>
       <article class="part reveal" style="--bg:var(--green)">
         <h3>Engine</h3>
-        <p>Does the scanning and sorting. Python standard library only.</p>
+        <p>The script itself. Nothing to install beyond Python and git.</p>
         <div class="spec"><span class="tag">PYTHON</span>
-          <ul aria-hidden="true"><li>git status</li><li>sort downloads</li><li>check secrets</li></ul></div>
+          <ul aria-hidden="true"><li>radar.py</li><li>radar.py downloads</li><li>radar.py serve</li></ul></div>
       </article>
     </div>
   </div>
