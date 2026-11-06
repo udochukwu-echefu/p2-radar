@@ -232,7 +232,6 @@ kbd { font: 500 .85em var(--mono); padding: .05em .4em; border-radius: 6px; bord
 .dcard.mine .go { background: var(--accent); box-shadow: none; color: white; }
 .dcard.mine .go:hover { filter: brightness(1.1); }
 .dcard .go:active { transform: scale(.97); }
-.dcard .size { margin-top: 10px; text-align: center; font: 12px var(--mono); color: var(--text-3); min-height: 1.5em; }
 .source { max-width: 820px; margin: 22px auto 0; text-align: left; }
 .source summary { cursor: pointer; width: fit-content; margin: 0 auto; padding: 8px 14px; border-radius: 999px; list-style: none; font-size: 14px; color: var(--text-2); border: 1px solid var(--line); transition: color .15s var(--ease), background .15s var(--ease); }
 .source summary::-webkit-details-marker { display: none; }
@@ -489,8 +488,7 @@ footer a { color: var(--text-2); text-decoration: underline; text-underline-offs
           <li>Needs Python 3 (macOS offers to install it)</li>
           <li>First open: if macOS blocks it, go to System Settings › Privacy &amp; Security and click Open Anyway</li>
         </ul>
-        <a class="go" href="https://github.com/udochukwu-echefu/p2-radar/releases/latest/download/P2-Radar-mac.zip" data-asset="P2-Radar-mac.zip"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Download for Mac</a>
-        <div class="size"></div>
+        <a class="go" href="https://github.com/udochukwu-echefu/p2-radar/releases/latest/download/P2-Radar-mac.zip"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Download for Mac</a>
       </div>
       <div class="dcard" data-os="win">
         <div class="os"><svg class="i" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10 4.5v7H3zM11 4.4 21 3v8.5H11zM3 12.5h7v7l-7-1zM11 12.5h10V21l-10-1.4z"/></svg>Windows<small class="ver"></small></div>
@@ -499,8 +497,7 @@ footer a { color: var(--text-2); text-decoration: underline; text-underline-offs
           <li>Needs Python 3 from python.org</li>
           <li>Unzip and open "P2 Radar.exe". If SmartScreen warns, click More info › Run anyway</li>
         </ul>
-        <a class="go" href="https://github.com/udochukwu-echefu/p2-radar/releases/latest/download/P2-Radar-windows-x64.zip" data-asset="P2-Radar-windows-x64.zip"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Download for Windows</a>
-        <div class="size"></div>
+        <a class="go" href="https://github.com/udochukwu-echefu/p2-radar/releases/latest/download/P2-Radar-windows-x64.zip"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Download for Windows</a>
       </div>
     </div>
     <details class="source reveal">
@@ -591,7 +588,7 @@ document.querySelectorAll("#copy, [data-copy]").forEach(btn => btn.addEventListe
 }));
 
 /* Downloads: point the main button at this visitor's OS, and fill in the
-   version, file sizes and star count from GitHub when it answers. */
+   version and star count from GitHub when it answers. */
 const REPO = "udochukwu-echefu/p2-radar";
 const ua = (navigator.userAgentData?.platform || navigator.platform || navigator.userAgent).toLowerCase();
 const mobile = /iphone|ipad|android/.test(navigator.userAgent.toLowerCase());
@@ -607,7 +604,6 @@ const words = os === "mac" ? { here: "this Mac", bin: "Trash", mod: "⌘" }
   : os === "win" ? { here: "this PC", bin: "Recycle Bin", mod: "Ctrl " }
   : { here: "this computer", bin: "Trash or Recycle Bin", mod: "Ctrl " };
 document.querySelectorAll("[data-w]").forEach(el => el.textContent = words[el.dataset.w]);
-const mb = (b) => b > 1e6 ? `${(b / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1e3))} KB`;
 fetch(`https://api.github.com/repos/${REPO}`).then(r => r.ok ? r.json() : null).then(repo => {
   if (!repo?.stargazers_count) return;   // "0" reads as a scoreboard; just say Star
   document.querySelectorAll(".stars").forEach(el => { el.textContent = repo.stargazers_count.toLocaleString(); el.hidden = false; });
@@ -619,10 +615,6 @@ fetch(`https://api.github.com/repos/${REPO}/releases/latest`).then(r => r.ok ? r
     return;
   }
   document.querySelectorAll(".ver").forEach(el => el.textContent = rel.tag_name + (el.closest(".meta") ? " · " : ""));
-  document.querySelectorAll(".dcard .go").forEach(a => {
-    const asset = rel.assets.find(x => x.name === a.dataset.asset);
-    if (asset) a.parentElement.querySelector(".size").textContent = `${asset.name} · ${mb(asset.size)}`;
-  });
 }).catch(() => {});
 
 /* fade sections in as they scroll into view */
