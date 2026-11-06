@@ -13,7 +13,7 @@ Everything runs locally. P2 Radar's dashboard is served on `127.0.0.1` only, and
 
 ## Download
 
-Get the latest build for macOS (universal) or Windows from [Releases](https://github.com/udochukwu-echefu/p2-radar/releases/latest), or from the [website](https://udochukwu-echefu.github.io/p2-radar/). Both need Python 3.
+Get the latest build for macOS (universal) or Windows from [Releases](https://github.com/udochukwu-echefu/p2-radar/releases/latest), or from the [website](https://p2-radar.vercel.app). Both need Python 3.
 
 The apps aren't notarized or code-signed by a paid developer account, so the first launch shows a warning: on macOS, open System Settings › Privacy & Security and click **Open Anyway**; on Windows, click **More info › Run anyway** in SmartScreen.
 
