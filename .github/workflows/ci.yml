@@ -35,15 +35,14 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
       - name: Build
         shell: pwsh
         run: ./win-app/build.ps1 -NoInstall
-      - name: Engine runs from the published folder
+      - name: Engine runs on the bundled Python
         shell: pwsh
-        run: python win-app/publish/engine/radar.py --root tests
+        run: |
+          ./win-app/publish/python/python.exe --version
+          ./win-app/publish/python/python.exe win-app/publish/engine/radar.py --root tests
       - name: Package
         shell: pwsh
         run: |
@@ -67,6 +66,12 @@ jobs:
         run: |
           RADAR_VERSION="${RADAR_VERSION#v}" ./mac-app/build.sh --no-install
           lipo -archs "mac-app/build/P2 Radar.app/Contents/MacOS/Radar"
+      - name: Engine runs on the bundled Python
+        run: |
+          py="mac-app/build/P2 Radar.app/Contents/Resources/python/bin/python3"
+          lipo -archs "$(dirname "$py")/python3.13"
+          "$py" --version
+          "$py" "mac-app/build/P2 Radar.app/Contents/Resources/radar/radar.py" --root tests
       - name: Native converter
         run: |
           printf '<h1>P2 Radar</h1><p>CI</p>' > /tmp/ci.html

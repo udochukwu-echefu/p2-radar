@@ -769,6 +769,7 @@ function renderProjects() {
       ${stat("var(--blue)", "up", "Not pushed", n("unpushed"), n("unpushed") === 1 ? "project" : "projects", "Committed, not on a remote", null, "unpushed")}
       ${stat("var(--green)", "check", "Backed up", n("safe"), `/ ${act.length}`, "", act.length ? n("safe") / act.length : 0, "safe")}
     </div>
+    ${S.proj.git === false ? `<div class="notice"><b>Git isn't installed.</b> P2 Radar uses it to check your projects. ${P.os === "mac" ? "macOS should offer to install it. If it doesn't, run <code>xcode-select --install</code> in Terminal" : `Get it from <a href="https://git-scm.com/downloads">git-scm.com</a>`}, then rescan. Cleanup and Convert work without it.</div>` : ""}
     ${blocked.length ? `<div class="notice"><b>Some folders couldn't be read:</b> <code>${blocked.map(esc).join(", ")}</code>. ${P.os === "mac" ? "Allow P2 Radar in System Settings › Privacy &amp; Security › Files &amp; Folders" : "Check that your account can open them"}, then press ${P.mod}R.</div>` : ""}
     ${body}`;
   if (S.flash) {

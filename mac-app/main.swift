@@ -22,19 +22,22 @@ let engineScript = engineDir.appendingPathComponent("radar.py").path
 let appSecret = UUID().uuidString   // lets only this app report file changes to the engine
 
 func findPython() -> String? {
-    let candidates = [
+    let bundled = Bundle.main.resourceURL?.appendingPathComponent("python/bin/python3").path
+    let candidates = [bundled,   // the app's own copy; the rest are for development builds
         "/Library/Frameworks/Python.framework/Versions/Current/bin/python3",
         "/opt/homebrew/bin/python3",
         "/usr/local/bin/python3",
         "/usr/bin/python3",
     ]
-    return candidates.first { FileManager.default.isExecutableFile(atPath: $0) }
+    return candidates.compactMap { $0 }.first { FileManager.default.isExecutableFile(atPath: $0) }
 }
 
 func engineEnvironment() -> [String: String] {
     var env = ProcessInfo.processInfo.environment
     // Apps launched from Finder get a bare PATH; git, gh and code live here.
     env["PATH"] = "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+    env["PYTHONHOME"] = nil   // a setting meant for another Python would break the bundled one
+    env["PYTHONPATH"] = nil
     env["PYTHONUNBUFFERED"] = "1"
     env["PYTHONDONTWRITEBYTECODE"] = "1"  // never write __pycache__ into the signed bundle
     env["RADAR_APP"] = "1"

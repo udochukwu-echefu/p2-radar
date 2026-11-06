@@ -114,6 +114,14 @@ def git(repo, *args, timeout=30, input=None):
     return r.returncode, r.stdout, r.stderr
 
 
+def git_works():
+    """False when git is missing, or is macOS's stand-in that only offers to install it."""
+    try:
+        return subprocess.run(["git", "--version"], capture_output=True, timeout=30, **osutil.quiet()).returncode == 0
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+
+
 def normalize_remote(url):
     if not url:
         return None
@@ -323,6 +331,7 @@ def scan(roots, with_sizes=True):
         "blocked": [osutil.display(b) for b in blocked],
         "platform": osutil.info(),
         "repos": repos,
+        "git": git_works(),
         "gh": bool(shutil.which("gh")),
         "editor": bool(shutil.which("code")),
     }

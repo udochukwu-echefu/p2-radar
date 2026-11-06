@@ -1,8 +1,10 @@
 # build output
 mac-app/build/
+mac-app/.python-cache/
 win-app/bin/
 win-app/obj/
 win-app/publish/
+win-app/.python-cache/
 
 # Python
 __pycache__/

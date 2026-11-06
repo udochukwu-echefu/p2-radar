@@ -13,7 +13,7 @@ Everything runs locally. P2 Radar's dashboard is served on `127.0.0.1` only, and
 
 ## Download
 
-Get the latest build for macOS (universal) or Windows from [Releases](https://github.com/udochukwu-echefu/p2-radar/releases/latest), or from the [website](https://p2-radar.vercel.app). Both need Python 3.
+Get the latest build for macOS (universal) or Windows from [Releases](https://github.com/udochukwu-echefu/p2-radar/releases/latest), or from the [website](https://p2-radar.vercel.app). Python comes inside the app. You only need Git, for the Projects tab: macOS offers to install it, and on Windows it's at [git-scm.com](https://git-scm.com/downloads). Cleanup and Convert work without it.
 
 The apps aren't notarized or code-signed by a paid developer account, so the first launch shows a warning: on macOS, open System Settings › Privacy & Security and click **Open Anyway**; on Windows, click **More info › Run anyway** in SmartScreen.
 
@@ -21,7 +21,7 @@ If P2 Radar is useful to you, a ⭐ on GitHub helps other people find it.
 
 ## Build on macOS
 
-Requirements: macOS 14 or later, Python 3.8+ (from [python.org](https://www.python.org/downloads/macos/) or Homebrew), and the Xcode command line tools (`xcode-select --install`) to build the app. The [GitHub CLI](https://cli.github.com) (`gh`) is optional and enables "Back up to GitHub".
+Requirements: macOS 14 or later and the Xcode command line tools (`xcode-select --install`) to build the app. The [GitHub CLI](https://cli.github.com) (`gh`) is optional and enables "Back up to GitHub".
 
 ```bash
 git clone https://github.com/udochukwu-echefu/p2-radar.git
@@ -40,7 +40,7 @@ Optional weekly check (Mondays at 10:00, posts a notification when work isn't ba
 
 ## Build on Windows
 
-Requirements: Windows 10 or 11, Python 3.8+ from [python.org](https://www.python.org/downloads/windows/) (tick "Add to PATH"), the [.NET 8 SDK](https://dotnet.microsoft.com/download) to build, and Git. Microsoft Word or LibreOffice enables document and PDF conversion; images convert without them.
+Requirements: Windows 10 or 11, the [.NET 8 SDK](https://dotnet.microsoft.com/download) to build, and Git. Microsoft Word or LibreOffice enables document and PDF conversion; images convert without them.
 
 ```powershell
 git clone https://github.com/udochukwu-echefu/p2-radar.git
@@ -111,7 +111,7 @@ project-radar/leaks.py       secrets check                  convert.py   convert
 project-radar/dashboard.html the dashboard
 ```
 
-The engine is Python standard library only. The server answers only on `127.0.0.1`, checks the `Host` header, and requires a per-launch token for every action. State (scan cache, hidden projects, the undo log) lives in `~/Library/Application Support/Project Radar/`.
+The engine is Python standard library only. Both builds download a pinned, checksummed standalone Python ([python-build-standalone](https://github.com/astral-sh/python-build-standalone)) and bundle it, so the apps run without a separate install. The server answers only on `127.0.0.1`, checks the `Host` header, and requires a per-launch token for every action. State (scan cache, hidden projects, the undo log) lives in `~/Library/Application Support/Project Radar/`.
 
 ```bash
 ./mac-app/build.sh            # rebuild and reinstall the app

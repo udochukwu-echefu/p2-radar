@@ -28,6 +28,8 @@ static class Engine
     {
         var env = Environment.GetEnvironmentVariable("RADAR_PYTHON");
         if (!string.IsNullOrEmpty(env) && File.Exists(env)) return (env, Array.Empty<string>());
+        var bundled = Path.Combine(AppContext.BaseDirectory, "python", "python.exe");   // the app's own copy
+        if (File.Exists(bundled)) return (bundled, Array.Empty<string>());
         var local = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "Python");
         if (Directory.Exists(local))
         {

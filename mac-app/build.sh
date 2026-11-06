@@ -65,6 +65,8 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/radar"
 cp "$BUILD/Radar" "$APP/Contents/MacOS/Radar"
 cp "$BUILD/Radar.icns" "$APP/Contents/Resources/Radar.icns"
 cp "$BUILD/magsafe-led" "$APP/Contents/Resources/magsafe-led"
+echo "→ python"
+"$HERE/bundle-python.sh" "$APP/Contents/Resources/python" ${RADAR_ARCHS:-$(uname -m)}
 cp "$ENGINE"/*.py "$ENGINE/dashboard.html" "$APP/Contents/Resources/radar/"
 cat > "$APP/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
